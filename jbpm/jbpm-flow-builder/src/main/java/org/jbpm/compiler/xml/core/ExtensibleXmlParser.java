@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.FactoryConfigurationError;
 import javax.xml.parsers.ParserConfigurationException;
@@ -266,6 +267,7 @@ public class ExtensibleXmlParser extends DefaultHandler implements Parser {
                 factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
                 factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
                 factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+                factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
 
             } catch (ParserConfigurationException e) {
                 logger.warn("Unable to set parser features due to {}", e.getMessage());
