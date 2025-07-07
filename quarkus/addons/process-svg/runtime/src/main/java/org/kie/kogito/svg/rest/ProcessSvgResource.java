@@ -35,6 +35,8 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Response;
 
+import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+
 @ApplicationScoped
 @Path("/svg")
 public class ProcessSvgResource {
@@ -52,6 +54,18 @@ public class ProcessSvgResource {
         Optional<String> processSvg = service.getProcessSvg(processId);
         if (processSvg.isPresent()) {
             return Response.ok(processSvg.get()).build();
+        } else {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+    }
+
+    @GET
+    @Path("processes/mpf/{processId}")
+    @Produces(APPLICATION_JSON)
+    public Response getProcessMpf(@PathParam("processId") String processId) {
+        Optional<String> processMpf = service.getProcessMpf(processId);
+        if (processMpf.isPresent()) {
+            return Response.ok(processMpf.get()).build();
         } else {
             return Response.status(Response.Status.NOT_FOUND).build();
         }

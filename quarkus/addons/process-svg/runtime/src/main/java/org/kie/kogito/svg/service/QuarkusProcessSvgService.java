@@ -32,6 +32,7 @@ public class QuarkusProcessSvgService extends AbstractProcessSvgService {
 
     @Inject
     public QuarkusProcessSvgService(DataIndexClient dataIndexClient,
+            // TODO: we need to understand of also MPF configuration is needed here
             @ConfigProperty(name = "kogito.svg.folder.path") Optional<String> svgResourcesPath,
             @ConfigProperty(name = "kogito.svg.color.completed", defaultValue = DEFAULT_COMPLETED_COLOR) String completedColor,
             @ConfigProperty(name = "kogito.svg.color.completed.border", defaultValue = DEFAULT_COMPLETED_BORDER_COLOR) String completedBorderColor,
