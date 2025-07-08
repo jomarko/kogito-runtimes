@@ -20,6 +20,8 @@ package org.jbpm.flow.migration.model;
 
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class MigrationPlan {
 
     private String name;
@@ -34,6 +36,7 @@ public class MigrationPlan {
         this.processMigrationPlan = processMigrationPlan;
     }
 
+    @JsonIgnore
     public ProcessDefinitionMigrationPlan getSource() {
         return this.processMigrationPlan.getSourceProcessDefinition();
     }
