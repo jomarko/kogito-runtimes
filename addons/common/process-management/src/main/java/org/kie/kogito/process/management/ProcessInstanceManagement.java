@@ -54,4 +54,5 @@ public interface ProcessInstanceManagement<T> {
 
     T updateProcessInstanceSla(String processId, String processInstanceId, SlaPayload SLAPayload);
 
+    T getProcessMigrationPlanFileContent(String processId);
 }

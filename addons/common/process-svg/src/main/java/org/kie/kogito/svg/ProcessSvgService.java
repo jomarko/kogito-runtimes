@@ -26,5 +26,4 @@ public interface ProcessSvgService {
 
     Optional<String> getProcessSvg(String processId);
 
-    Optional<String> getProcessMpf(String processId);
 }
