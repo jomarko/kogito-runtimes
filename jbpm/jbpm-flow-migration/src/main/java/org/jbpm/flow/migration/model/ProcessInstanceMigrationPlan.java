@@ -24,6 +24,8 @@ import java.util.Objects;
 import org.kie.api.definition.process.WorkflowElementIdentifier;
 import org.kie.kogito.internal.process.runtime.KogitoNodeInstance;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class ProcessInstanceMigrationPlan {
 
     private ProcessDefinitionMigrationPlan sourceProcessDefinition;
@@ -39,6 +41,7 @@ public class ProcessInstanceMigrationPlan {
         this.nodeInstanceMigrationPlan = nodeInstanceMigrationPlan;
     }
 
+    @JsonIgnore
     public WorkflowElementIdentifier getNodeMigratedFor(KogitoNodeInstance instance) {
         List<NodeInstanceMigrationPlan> plans = nodeInstanceMigrationPlan.stream().filter(e -> e.getSourceNodeId().equals(instance.getNodeId())).toList();
         if (plans.isEmpty()) {
