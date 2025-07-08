@@ -44,7 +44,6 @@ public abstract class AbstractProcessSvgService implements ProcessSvgService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractProcessSvgService.class);
     public static final String SVG_RELATIVE_PATH = "META-INF/processSVG/";
-    public static final String MPF_RELATIVE_PATH = "META-INF/migration-plan/";
     protected DataIndexClient dataIndexClient;
     protected Optional<String> svgResourcesPath;
     protected String completedColor;
@@ -82,26 +81,6 @@ public abstract class AbstractProcessSvgService implements ProcessSvgService {
             }
         } else {
             return readFileContentFromClassPath(SVG_RELATIVE_PATH, processId + ".svg");
-        }
-    }
-
-    @Override
-    // TODO: We need to answer a question if the naming of the .mpf files has some rule, like all are suffixed with "_migration.mpf" or not.
-    public Optional<String> getProcessMpf(String processId) {
-        if (svgResourcesPath.isPresent()) {
-            Path baseDir = Paths.get(svgResourcesPath.get());
-            try {
-                Path path = PathUtils.getSecuredPath(baseDir, processId + "_migration.mpf");
-                if (Files.notExists(path) || !Files.isRegularFile(path) || !path.toRealPath().startsWith(baseDir.toRealPath())) {
-                    LOGGER.warn("Could not find {}.mpf file in folder {}", processId, svgResourcesPath.get());
-                    return Optional.empty();
-                }
-                return Optional.of(new String(Files.readAllBytes(path)));
-            } catch (IOException e) {
-                throw new ProcessSVGException("Exception trying to read MPF file", e);
-            }
-        } else {
-            return readFileContentFromClassPath(MPF_RELATIVE_PATH, processId + "_migration.mpf");
         }
     }
 

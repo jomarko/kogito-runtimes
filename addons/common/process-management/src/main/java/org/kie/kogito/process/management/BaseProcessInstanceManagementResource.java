@@ -23,6 +23,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.jbpm.flow.migration.MigrationPlanProvider;
+import org.jbpm.flow.migration.model.MigrationPlan;
 import org.jbpm.ruleflow.core.Metadata;
 import org.jbpm.workflow.core.Node;
 import org.jbpm.workflow.core.WorkflowProcess;
@@ -39,7 +41,10 @@ import org.kie.kogito.process.WorkItem;
 import org.kie.kogito.process.impl.AbstractProcess;
 import org.kie.kogito.services.uow.UnitOfWorkExecutor;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 public abstract class BaseProcessInstanceManagementResource<T> implements ProcessInstanceManagement<T> {
 
@@ -48,6 +53,8 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
     private static final String PROCESS_NOT_FOUND = "Process with id %s not found";
     private static final String PROCESS_INSTANCE_NOT_FOUND = "Process instance with id %s not found";
     private static final String PROCESS_INSTANCE_NOT_IN_ERROR = "Process instance with id %s is not in error state";
+
+    private MigrationPlanProvider migrationPlanProvider = new MigrationPlanProvider.MigrationPlanProviderBuilder().withEnvironmentDefaults().build();
 
     private Supplier<Processes> processes;
 
@@ -346,5 +353,24 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
                 return badRequestResponse(e.getMessage());
             }
         });
+    }
+
+    public Optional<String> doGetProcessMigrationPlanFileContent(String processId) {
+        final List<MigrationPlan> migrationPlans = migrationPlanProvider.findMigrationPlans();
+        final Optional<MigrationPlan> migrationPlan = migrationPlans.stream()
+                .filter(mp -> Objects.equals(mp.getProcessMigrationPlan().getSourceProcessDefinition().getProcessId(), processId))
+                .findFirst();
+
+        if (migrationPlan.isPresent()) {
+            try {
+                final ObjectMapper mapper = new ObjectMapper();
+                mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+                return Optional.of(mapper.writeValueAsString(migrationPlan.get()));
+            } catch (JsonProcessingException e) {
+                return Optional.empty();
+            }
+        } else {
+            return Optional.empty();
+        }
     }
 }

@@ -58,6 +58,10 @@
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
     </dependency>
+      <dependency>
+      <groupId>org.kie.kogito</groupId>
+      <artifactId>jbpm-flow-migration</artifactId>
+    </dependency>
 
     <!-- test dependencies -->
     <dependency>

@@ -18,6 +18,8 @@
  */
 package org.kie.kogito.process.management;
 
+import java.util.Optional;
+
 import org.kie.kogito.Application;
 import org.kie.kogito.process.Processes;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,6 +83,17 @@ public class ProcessInstanceManagementRestController extends BaseProcessInstance
     @PostMapping(value = "{processId}/migrate", produces = APPLICATION_JSON_VALUE)
     public ResponseEntity migrateAllInstances(String processId, ProcessMigrationSpec migrationSpec) {
         return doMigrateAllInstances(processId, migrationSpec);
+    }
+
+    @Override
+    @GetMapping(value = "{processId}/migrate/plan", produces = APPLICATION_JSON_VALUE)
+    public ResponseEntity getProcessMigrationPlanFileContent(String processId) {
+        final Optional<String> result = doGetProcessMigrationPlanFileContent(processId);
+        if (result.isPresent()) {
+            return buildOkResponse(result.get());
+        } else {
+            return badRequestResponse("Process migration plan file not found for process id: " + processId);
+        }
     }
 
     @Override

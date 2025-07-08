@@ -18,6 +18,8 @@
  */
 package org.kie.kogito.process.management;
 
+import java.util.Optional;
+
 import org.kie.kogito.Application;
 import org.kie.kogito.process.Processes;
 
@@ -111,6 +113,19 @@ public class ProcessInstanceManagementResource extends BaseProcessInstanceManage
     @Produces(MediaType.APPLICATION_JSON)
     public Response migrateAllInstances(@PathParam("processId") String processId, ProcessMigrationSpec migrationSpec) {
         return doMigrateAllInstances(processId, migrationSpec);
+    }
+
+    @Override
+    @GET
+    @Path("{processId}/migrate/plan")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getProcessMigrationPlanFileContent(@PathParam("processId") String processId) {
+        final Optional<String> result = doGetProcessMigrationPlanFileContent(processId);
+        if (result.isPresent()) {
+            return buildOkResponse(result.get());
+        } else {
+            return notFoundResponse(processId + " migration plan file not found");
+        }
     }
 
     @Override
