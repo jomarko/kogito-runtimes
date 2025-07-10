@@ -90,6 +90,8 @@ public class MigrationPlanService {
     private MigrationPlan getMigrationPlan(Processes processes, KogitoWorkflowProcessInstance processInstance) {
         // first check if we need a migration as the process being set should be not be the same as the process set in the 
         // process being loaded.
+
+        // QUESTION: LUIZ ??? How this works? `currentProcessDefinition` is the same as `pi`
         String currentProcessId = processInstance.getProcess().getId();
         String currentVersion = processInstance.getProcess().getVersion();
         ProcessDefinitionMigrationPlan currentProcessDefinition = new ProcessDefinitionMigrationPlan(currentProcessId, currentVersion);
@@ -131,6 +133,8 @@ public class MigrationPlanService {
     }
 
     public boolean isEqualVersion(Processes processes, KogitoWorkflowProcessInstance processInstance) {
+        
+        // QUESTION: LUIZ ??? how this works?
         String currentProcessId = processInstance.getProcess().getId();
         String currentVersion = processInstance.getProcess().getVersion();
         ProcessDefinitionMigrationPlan currentProcessDefinition = new ProcessDefinitionMigrationPlan(currentProcessId, currentVersion);

@@ -119,13 +119,16 @@ public class ProcessInstanceManagementResource extends BaseProcessInstanceManage
     @GET
     @Path("{processId}/migrate/plan")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getProcessMigrationPlanFileContent(@PathParam("processId") String processId) {
-        final Optional<String> result = doGetProcessMigrationPlanFileContent(processId);
-        if (result.isPresent()) {
-            return buildOkResponse(result.get());
-        } else {
-            return notFoundResponse(processId + " migration plan file not found");
-        }
+    public Response getMigrationPlan(@PathParam("processId") String processId) {
+        return doGetMigrationPlan(processId);
+    }
+
+    @Override
+    @POST
+    @Path("{processId}/migrate/plan")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response createMigrationPlan(@PathParam("processId") String processId, ProcessMigrationSpec migrationSpec) {
+        return doCreateMigrationPlan(processId, migrationSpec);
     }
 
     @Override
