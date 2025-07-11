@@ -27,7 +27,7 @@ public class ProcessMigrationSpec {
     private String targetProcessId;
 
     private String targetProcessVersion;
-    
+
     private List<NodeInstanceMigrationPlan> nodeMapping;
 
     public List<NodeInstanceMigrationPlan> getNodeMapping() {

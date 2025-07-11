@@ -49,9 +49,9 @@ public interface ProcessInstanceManagement<T> {
     T migrateAllInstances(String processId, ProcessMigrationSpec migrationSpec);
 
     T migrateInstance(String processId, String processInstanceId, ProcessMigrationSpec migrationSpec);
-    
+
     T getMigrationPlan(String processId);
-    
+
     T createMigrationPlan(String processId, ProcessMigrationSpec migrationSpec);
 
     T updateNodeInstanceSla(String processId, String processInstanceId, String nodeInstanceId, SlaPayload SLAPayload);

@@ -133,7 +133,7 @@ public class MigrationPlanService {
     }
 
     public boolean isEqualVersion(Processes processes, KogitoWorkflowProcessInstance processInstance) {
-        
+
         // QUESTION: LUIZ ??? how this works?
         String currentProcessId = processInstance.getProcess().getId();
         String currentVersion = processInstance.getProcess().getVersion();

@@ -21,7 +21,7 @@ package org.kie.kogito.process.management;
 public class NodeMigrationSpec {
     private String sourceNodeId;
     private String targetNodeId;
-    
+
     public String getSourceNodeId() {
         return sourceNodeId;
     }

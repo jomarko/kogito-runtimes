@@ -18,8 +18,6 @@
  */
 package org.kie.kogito.process.management;
 
-import java.util.Optional;
-
 import org.kie.kogito.Application;
 import org.kie.kogito.process.Processes;
 
