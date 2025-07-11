@@ -177,12 +177,12 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
             List<NodeInstanceMigrationPlan> nodeList = new LinkedList<NodeInstanceMigrationPlan>();
             nodeList.add(new NodeInstanceMigrationPlan(new WorkflowElementIdentifierFactory("source_node_id"), new WorkflowElementIdentifierFactory("target_node_id")));
             migrationPlan.setNodeInstanceMigrationPlan(nodeList);
-            ObjectMapper objectMapper = new ObjectMapper();
-            String migrationPlanJson = objectMapper.writeValueAsString(migrationPlan);
 
             Map<String, Object> message = new HashMap<>();
-            message.put("migrationPlan", migrationPlanJson);
-            return buildOkResponse(message);
+            message.put("migrationPlan", migrationPlan);
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            return buildOkResponse(objectMapper.writeValueAsString(message));
         } catch (Exception e) {
             return badRequestResponse(e.getMessage());
         }
@@ -214,16 +214,14 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
             migrationPlan.setSourceProcessDefinition(new ProcessDefinitionMigrationPlan(processId, "1.0"));
             migrationPlan.setTargetProcessDefinition(new ProcessDefinitionMigrationPlan(migrationSpec.getTargetProcessId(), migrationSpec.getTargetProcessVersion()));
             migrationPlan.setNodeInstanceMigrationPlan(migrationSpec.getNodeMapping());
-            ObjectMapper objectMapper = new ObjectMapper();
-            String migrationPlanJson = objectMapper.writeValueAsString(migrationPlan);
-
-
+            
             Process<? extends Model> process = processes.get().processById(processId);
             long numberOfProcessInstanceMigrated = process.instances().migrateAll(migrationSpec.getTargetProcessId(), migrationSpec.getTargetProcessVersion());
             Map<String, Object> message = new HashMap<>();
-            message.put("migrationPlan", migrationPlanJson);
+            message.put("migrationPlan", migrationPlan);
             message.put("numberOfProcessInstanceMigrated", numberOfProcessInstanceMigrated);
-            return buildOkResponse(message);
+            ObjectMapper objectMapper = new ObjectMapper();
+            return buildOkResponse(objectMapper.writeValueAsString(message));
         } catch (Exception e) {
             return badRequestResponse(e.getMessage());
         }
@@ -424,24 +422,5 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
                 return badRequestResponse(e.getMessage());
             }
         });
-    }
-
-    public Optional<String> doGetProcessMigrationPlanFileContent(String processId) {
-        final List<MigrationPlan> migrationPlans = migrationPlanProvider.findMigrationPlans();
-        final Optional<MigrationPlan> migrationPlan = migrationPlans.stream()
-                .filter(mp -> Objects.equals(mp.getProcessMigrationPlan().getSourceProcessDefinition().getProcessId(), processId))
-                .findFirst();
-
-        if (migrationPlan.isPresent()) {
-            try {
-                final ObjectMapper mapper = new ObjectMapper();
-                mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-                return Optional.of(mapper.writeValueAsString(migrationPlan.get()));
-            } catch (JsonProcessingException e) {
-                return Optional.empty();
-            }
-        } else {
-            return Optional.empty();
-        }
     }
 }
