@@ -18,40 +18,23 @@
  */
 package org.kie.kogito.process.management;
 
-import java.util.List;
-
-import org.jbpm.flow.migration.model.NodeInstanceMigrationPlan;
-
-public class ProcessMigrationSpec {
-
-    private String targetProcessId;
-
-    private String targetProcessVersion;
+public class NodeMigrationSpec {
+    private String sourceNodeId;
+    private String targetNodeId;
     
-    private List<NodeInstanceMigrationPlan> nodeMapping;
-
-    public List<NodeInstanceMigrationPlan> getNodeMapping() {
-        return nodeMapping;
+    public String getSourceNodeId() {
+        return sourceNodeId;
     }
 
-    public void setNodeMapping(List<NodeInstanceMigrationPlan> nodeMapping) {
-        this.nodeMapping = nodeMapping;
+    public void setSourceNodeId(String sourceNodeId) {
+        this.sourceNodeId = sourceNodeId;
     }
 
-    public String getTargetProcessId() {
-        return targetProcessId;
+    public String getTargetNodeId() {
+        return targetNodeId;
     }
 
-    public void setTargetProcessId(String targetProcessId) {
-        this.targetProcessId = targetProcessId;
+    public void setTargetNodeId(String targetNodeId) {
+        this.targetNodeId = targetNodeId;
     }
-
-    public String getTargetProcessVersion() {
-        return targetProcessVersion;
-    }
-
-    public void setTargetProcessVersion(String targetProcessVersion) {
-        this.targetProcessVersion = targetProcessVersion;
-    }
-
 }

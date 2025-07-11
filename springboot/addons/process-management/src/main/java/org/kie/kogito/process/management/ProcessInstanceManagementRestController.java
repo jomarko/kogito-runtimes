@@ -87,13 +87,14 @@ public class ProcessInstanceManagementRestController extends BaseProcessInstance
 
     @Override
     @GetMapping(value = "{processId}/migrate/plan", produces = APPLICATION_JSON_VALUE)
-    public ResponseEntity getProcessMigrationPlanFileContent(String processId) {
-        final Optional<String> result = doGetProcessMigrationPlanFileContent(processId);
-        if (result.isPresent()) {
-            return buildOkResponse(result.get());
-        } else {
-            return badRequestResponse("Process migration plan file not found for process id: " + processId);
-        }
+    public ResponseEntity getMigrationPlan(String processId) {
+        return doGetMigrationPlan(processId);
+    }
+
+    @Override
+    @PostMapping(value = "{processId}/migrate/plan", produces = APPLICATION_JSON_VALUE)
+    public ResponseEntity createMigrationPlan(String processId, ProcessMigrationSpec migrationSpec) {
+        return doCreateMigrationPlan(processId, migrationSpec);
     }
 
     @Override

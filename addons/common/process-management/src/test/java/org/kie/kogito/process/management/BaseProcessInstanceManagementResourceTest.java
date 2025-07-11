@@ -218,8 +218,12 @@ class BaseProcessInstanceManagementResourceTest {
             }
 
             @Override
-            public Object getProcessMigrationPlanFileContent(String processId) {
-                // TODO Auto-generated method stub
+            public Object getMigrationPlan(String processId) {
+                return null;
+            }
+
+            @Override
+            public Object createMigrationPlan(String processId, ProcessMigrationSpec migrationSpec) {
                 return null;
             }
 
