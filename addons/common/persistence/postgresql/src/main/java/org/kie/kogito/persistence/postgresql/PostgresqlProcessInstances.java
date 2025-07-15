@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -245,6 +246,13 @@ public class PostgresqlProcessInstances<T extends Model> implements MutableProce
         } catch (Exception e) {
             throw uncheckedException(e, "Error deleting process instance %s", Arrays.toString(processIds));
         }
+    }
+
+    @Override
+    public String createMigrationPlan(String sourceProcessId, String sourceProcessVersion, String targetProcessId,
+            String targetProcessVersion, Map<String, String> nodeMapping) {
+        // TODO Here real implementation is needed, but for now we throw an exception
+        throw new UnsupportedOperationException("Migration is not supported in PostgresqlProcessInstances");
     }
 
     private boolean updateInternal(String id, byte[] payload, String[] eventTypes) {

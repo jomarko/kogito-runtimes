@@ -19,6 +19,7 @@
 package org.kie.kogito.persistence.jdbc;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -165,4 +166,12 @@ public class JDBCProcessInstances<T extends Model> implements MutableProcessInst
             return r.getPayload();
         }));
     }
+
+    @Override
+    public String createMigrationPlan(String sourceProcessId, String sourceProcessVersion, String targetProcessId,
+            String targetProcessVersion, Map<String, String> nodeMapping) {
+        // TODO Here real implementation is needed, but for now we throw an exception
+        throw new UnsupportedOperationException("Migration is not supported in JDBCProcessInstances");
+    }
+
 }

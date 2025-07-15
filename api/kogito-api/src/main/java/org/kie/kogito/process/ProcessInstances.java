@@ -18,6 +18,7 @@
  */
 package org.kie.kogito.process;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -38,6 +39,18 @@ public interface ProcessInstances<T> {
     }
 
     default long migrateAll(String targetProcessId, String targetProcessVersion) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * TODO Here is a question, what should be the method signature
+     * this module can not access any of:
+     * - `MigrationPlan`
+     * - `MigrationPlanFile`
+     * - `ProcessInstanceMigrationPlan`
+     * - `ProcessMigrationSpec`
+     */
+    default String createMigrationPlan(String sourceProcessId, String sourceProcessVersion, String targetProcessId, String targetProcessVersion, Map<String, String> nodeMapping) {
         throw new UnsupportedOperationException();
     }
 

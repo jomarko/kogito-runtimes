@@ -18,13 +18,14 @@
  */
 package org.kie.kogito.process.management;
 
+import static java.util.stream.Collectors.mapping;
+
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.jbpm.flow.migration.MigrationPlanProvider;
-import org.jbpm.flow.migration.model.MigrationPlan;
 import org.jbpm.flow.migration.model.NodeInstanceMigrationPlan;
 import org.jbpm.flow.migration.model.ProcessDefinitionMigrationPlan;
 import org.jbpm.flow.migration.model.ProcessInstanceMigrationPlan;
@@ -45,10 +46,8 @@ import org.kie.kogito.process.WorkItem;
 import org.kie.kogito.process.impl.AbstractProcess;
 import org.kie.kogito.services.uow.UnitOfWorkExecutor;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 
 public abstract class BaseProcessInstanceManagementResource<T> implements ProcessInstanceManagement<T> {
 
@@ -214,13 +213,21 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
             migrationPlan.setSourceProcessDefinition(new ProcessDefinitionMigrationPlan(processId, "1.0"));
             migrationPlan.setTargetProcessDefinition(new ProcessDefinitionMigrationPlan(migrationSpec.getTargetProcessId(), migrationSpec.getTargetProcessVersion()));
             migrationPlan.setNodeInstanceMigrationPlan(migrationSpec.getNodeMapping());
-            
-            Process<? extends Model> process = processes.get().processById(processId);
-            long numberOfProcessInstanceMigrated = process.instances().migrateAll(migrationSpec.getTargetProcessId(), migrationSpec.getTargetProcessVersion());
+
+            long numberOfProcessInstanceMigrated = sourceProcess.instances().migrateAll(migrationSpec.getTargetProcessId(), migrationSpec.getTargetProcessVersion());
             Map<String, Object> message = new HashMap<>();
             message.put("migrationPlan", migrationPlan);
             message.put("numberOfProcessInstanceMigrated", numberOfProcessInstanceMigrated);
             ObjectMapper objectMapper = new ObjectMapper();
+
+            // TODO
+            // sourceProcess.instances().createMigrationPlan(processId,
+            //         sourceProcess.version(),
+            //         migrationSpec.getTargetProcessId(),
+            //         migrationSpec.getTargetProcessVersion(),
+            //         migrationSpec.getNodeMapping().stream().collect(Collectors.toMap(
+            //                 m -> m.getSourceNodeId().toExternalFormat(), m -> m.getTargetNodeId().toExternalFormat())));
+
             return buildOkResponse(objectMapper.writeValueAsString(message));
         } catch (Exception e) {
             return badRequestResponse(e.getMessage());
