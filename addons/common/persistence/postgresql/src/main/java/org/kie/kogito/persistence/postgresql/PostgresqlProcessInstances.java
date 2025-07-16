@@ -23,8 +23,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -58,6 +58,8 @@ public class PostgresqlProcessInstances<T extends Model> implements MutableProce
 
     private static final String IS_NULL = "is null";
     private static final String INSERT = "INSERT INTO process_instances (id, payload, process_id, process_version, version) VALUES ($1, $2, $3, $4, $5)";
+    private static final String INSERT_MIGRATION_PLAN =
+            "INSERT INTO migration_plans (id, source_process_id, source_process_version, target_process_id, target_process_version, node_mapping) VALUES ($1, $2, $3, $4, $5, $6)";
     private static final String UPDATE = "UPDATE process_instances SET payload = $1 WHERE process_id = $2 and id = $3 and process_version ";
     private static final String DELETE = "DELETE FROM process_instances WHERE process_id = $1 and id = $2 and process_version ";
     private static final String FIND_BY_ID = "SELECT payload, version FROM process_instances WHERE process_id = $1 and id = $2 and process_version ";
@@ -250,9 +252,21 @@ public class PostgresqlProcessInstances<T extends Model> implements MutableProce
 
     @Override
     public String createMigrationPlan(String sourceProcessId, String sourceProcessVersion, String targetProcessId,
-            String targetProcessVersion, Map<String, String> nodeMapping) {
-        // TODO Here real implementation is needed, but for now we throw an exception
-        throw new UnsupportedOperationException("Migration is not supported in PostgresqlProcessInstances");
+            String targetProcessVersion, String nodeMappingJson) {
+        try {
+            Tuple tuple = Tuple.of(UUID.randomUUID().toString(), sourceProcessId, sourceProcessVersion, targetProcessId, targetProcessVersion, nodeMappingJson);
+            Future<RowSet<Row>> future = client.preparedQuery(INSERT_MIGRATION_PLAN).execute(tuple);
+            getExecutedResult(future);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw uncheckedException(e, "Error inserting migration plan from process %s %s to process %s %s",
+                    sourceProcessId, sourceProcessVersion, targetProcessId, targetProcessVersion);
+        } catch (Exception e) {
+            throw uncheckedException(e, "Error inserting migration plan from process %s %s to process %s %s",
+                    sourceProcessId, sourceProcessVersion, targetProcessId, targetProcessVersion);
+        }
+
+        return "DONE";
     }
 
     private boolean updateInternal(String id, byte[] payload, String[] eventTypes) {

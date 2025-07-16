@@ -17,28 +17,13 @@
 -- under the License.
 --
 
--- CREATE TABLE migration_plans
--- (
---     id character(36) NOT NULL,
---     migration_plan JSONB NOT NULL,
-
---     CONSTRAINT migration_plans_pk
---     PRIMARY KEY id
--- );
-
--- CREATE TABLE migration_plans_process_instances
--- (
---     migration_plan_id character(36) NOT NULL,
---     process_instance_id character(36) NOT NULL,
---     migrated BOOLEAN NOT NULL,
-
---     PRIMARY KEY (migration_plan_id, process_instance_id),
---     CONSTRAINT migration_plans_fk
---         FOREIGN KEY (migration_plan_id)
---         REFERENCES  migration_plans(id)
---         ON DELETE CASCADE,
-
---     CONSTRAINT process_instances_fk
---         FOREIGN KEY (process_instance_id)
---         REFERENCES  process_instances(id)
--- );
+CREATE TABLE migration_plans (
+    id character(36) NOT NULL,
+    source_process_id character varying NOT NULL,
+    source_process_version character varying NOT NULL,
+    target_process_id character varying NOT NULL,
+    target_process_version character varying NOT NULL,
+    node_mapping character varying NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT migration_plans_pk PRIMARY KEY (id)
+);

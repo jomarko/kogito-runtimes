@@ -25,6 +25,8 @@ import java.util.stream.Stream;
 abstract class Repository {
 
     static final String INSERT = "INSERT INTO process_instances (id, payload, process_id, process_version, version) VALUES (?, ?, ?, ?, ?)";
+    static final String INSERT_MIGRATION_PLAN =
+            "INSERT INTO migration_plans (id, source_process_id, source_process_version, target_process_id, target_process_version, node_mapping) VALUES (?, ?, ?, ?, ?, ?)";
     static final String INSERT_BUSINESS_KEY = "INSERT INTO business_key_mapping (business_key,process_instance_id) VALUES (?,?)";
     static final String FIND_ALL = "SELECT payload, version FROM process_instances WHERE process_id = ?";
     static final String FIND_BY_ID = "SELECT payload, version FROM process_instances WHERE process_id = ? and id = ?";
@@ -60,6 +62,8 @@ abstract class Repository {
     }
 
     abstract void insertInternal(String processId, String processVersion, UUID id, byte[] payload, String businessKey, String[] eventTypes);
+
+    abstract void insertMigrationPlanInternal(String sourceProcessId, String sourceProcessVersion, String targetProcessId, String targetProcessVersion, String nodeMappingJson);
 
     abstract void updateInternal(String processId, String processVersion, UUID id, byte[] payload, String[] eventTypes);
 

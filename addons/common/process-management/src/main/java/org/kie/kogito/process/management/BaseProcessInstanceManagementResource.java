@@ -18,8 +18,6 @@
  */
 package org.kie.kogito.process.management;
 
-import static java.util.stream.Collectors.mapping;
-
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -221,12 +219,11 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
             ObjectMapper objectMapper = new ObjectMapper();
 
             // TODO
-            // sourceProcess.instances().createMigrationPlan(processId,
-            //         sourceProcess.version(),
-            //         migrationSpec.getTargetProcessId(),
-            //         migrationSpec.getTargetProcessVersion(),
-            //         migrationSpec.getNodeMapping().stream().collect(Collectors.toMap(
-            //                 m -> m.getSourceNodeId().toExternalFormat(), m -> m.getTargetNodeId().toExternalFormat())));
+            sourceProcess.instances().createMigrationPlan(processId,
+                    sourceProcess.version(),
+                    migrationSpec.getTargetProcessId(),
+                    migrationSpec.getTargetProcessVersion(),
+                    objectMapper.writeValueAsString(migrationSpec.getNodeMapping() == null ? Collections.emptyList() : migrationSpec.getNodeMapping()));
 
             return buildOkResponse(objectMapper.writeValueAsString(message));
         } catch (Exception e) {

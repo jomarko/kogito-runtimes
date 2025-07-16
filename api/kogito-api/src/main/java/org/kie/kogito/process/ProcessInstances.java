@@ -18,7 +18,6 @@
  */
 package org.kie.kogito.process;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -50,7 +49,7 @@ public interface ProcessInstances<T> {
      * - `ProcessInstanceMigrationPlan`
      * - `ProcessMigrationSpec`
      */
-    default String createMigrationPlan(String sourceProcessId, String sourceProcessVersion, String targetProcessId, String targetProcessVersion, Map<String, String> nodeMapping) {
+    default String createMigrationPlan(String sourceProcessId, String sourceProcessVersion, String targetProcessId, String targetProcessVersion, String nodeMappingJson) {
         throw new UnsupportedOperationException();
     }
 
