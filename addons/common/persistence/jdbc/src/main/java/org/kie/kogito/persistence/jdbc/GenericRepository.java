@@ -94,17 +94,20 @@ public class GenericRepository extends Repository {
     }
 
     @Override
-    void insertMigrationPlanInternal(String sourceProcessId, String sourceProcessVersion, String targetProcessId, String targetProcessVersion, String nodeMappingJson) {
+    String insertMigrationPlanInternal(String sourceProcessId, String sourceProcessVersion, String targetProcessId, String targetProcessVersion, String nodeMappingJson) {
         try (Connection connection = dataSource.getConnection(); PreparedStatement statement = connection.prepareStatement(INSERT_MIGRATION_PLAN);) {
-
-            statement.setString(1, UUID.randomUUID().toString());
+            final String migrationPlanId = UUID.randomUUID().toString();
+            statement.setString(1, migrationPlanId);
 
             statement.setString(2, sourceProcessId);
             statement.setString(3, sourceProcessVersion);
             statement.setString(4, targetProcessId);
             statement.setString(5, targetProcessVersion);
             statement.setString(6, nodeMappingJson);
+
             statement.executeUpdate();
+
+            return migrationPlanId;
 
         } catch (Exception e) {
             throw uncheckedException(e, "Error inserting migration plan from process %s-%s to %s-%s", sourceProcessId, sourceProcessVersion, targetProcessId, targetProcessVersion);

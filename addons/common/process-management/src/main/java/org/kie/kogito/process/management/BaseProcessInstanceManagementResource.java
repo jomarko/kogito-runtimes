@@ -166,14 +166,6 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
                 return notFoundResponse(String.format(PROCESS_NOT_FOUND, processId));
             }
 
-            // // Mock up
-            // ProcessInstanceMigrationPlan migrationPlan = new ProcessInstanceMigrationPlan();
-            // migrationPlan.setSourceProcessDefinition(new ProcessDefinitionMigrationPlan(processId, "1.0"));
-            // migrationPlan.setTargetProcessDefinition(new ProcessDefinitionMigrationPlan("target_process_id", "target_process_version"));
-            // List<NodeInstanceMigrationPlan> nodeList = new LinkedList<NodeInstanceMigrationPlan>();
-            // nodeList.add(new NodeInstanceMigrationPlan(new WorkflowElementIdentifierFactory("source_node_id"), new WorkflowElementIdentifierFactory("target_node_id")));
-            // migrationPlan.setNodeInstanceMigrationPlan(nodeList);
-
             Map<String, Object> message = new HashMap<>();
             message.put("migrationPlanCount", sourceProcess.instances().findMigrationPlanByProcessIdCount(processId));
 
@@ -197,13 +189,17 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
             Process<? extends Model> targetProcess = processes.get().processById(migrationSpec.getTargetProcessId());
             if (targetProcess == null) {
                 // Add error message;
-                return notFoundResponse(String.format(PROCESS_NOT_FOUND, processId));
+                return notFoundResponse(String.format(PROCESS_NOT_FOUND, migrationSpec.getTargetProcessId()));
             }
 
             List<NodeInstanceMigrationPlan> nodeMapping = migrationSpec.getNodeMapping();
             for (NodeInstanceMigrationPlan nodes : nodeMapping) {
-                sourceProcess.findNodes(nodeInstance -> nodeInstance.getId().equals(nodes.getSourceNodeId()));
-                targetProcess.findNodes(nodeInstance -> nodeInstance.getId().equals(nodes.getTargetNodeId()));
+                if(sourceProcess.findNodes(nodeInstance -> nodeInstance.getId().equals(nodes.getSourceNodeId())).size() != 1) {
+                    return badRequestResponse(String.format("Source node '%s' not found in process '%s'", nodes.getSourceNodeId(), processId));
+                }
+                if(targetProcess.findNodes(nodeInstance -> nodeInstance.getId().equals(nodes.getTargetNodeId())).size() != 1) {
+                    return badRequestResponse(String.format("Target node '%s' not found in process '%s'", nodes.getTargetNodeId(), migrationSpec.getTargetProcessId()));
+                }
             }
 
             ProcessInstanceMigrationPlan migrationPlan = new ProcessInstanceMigrationPlan();
@@ -213,13 +209,13 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
 
             ObjectMapper objectMapper = new ObjectMapper();
 
-            sourceProcess.instances().createMigrationPlan(processId,
+            String response = sourceProcess.instances().createMigrationPlan(processId,
                     sourceProcess.version(),
                     migrationSpec.getTargetProcessId(),
                     migrationSpec.getTargetProcessVersion(),
                     objectMapper.writeValueAsString(migrationSpec.getNodeMapping() == null ? Collections.emptyList() : migrationSpec.getNodeMapping()));
 
-            return buildOkResponse(objectMapper.writeValueAsString(migrationPlan));
+            return buildOkResponse(response);
         } catch (Exception e) {
             return badRequestResponse(e.getMessage());
         }

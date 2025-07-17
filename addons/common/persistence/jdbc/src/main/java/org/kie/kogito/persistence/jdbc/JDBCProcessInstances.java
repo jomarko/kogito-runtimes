@@ -172,8 +172,8 @@ public class JDBCProcessInstances<T extends Model> implements MutableProcessInst
         LOGGER.debug("Creating migration plan from process {} version {} to process {} version {} with node mapping: {}",
                 sourceProcessId, sourceProcessVersion, targetProcessId, targetProcessVersion, nodeMappingJson);
 
-        repository.insertMigrationPlanInternal(sourceProcessId, sourceProcessVersion, targetProcessId, targetProcessVersion, nodeMappingJson);
-        return "DONE";
+        String migrationPlanId = repository.insertMigrationPlanInternal(sourceProcessId, sourceProcessVersion, targetProcessId, targetProcessVersion, nodeMappingJson);
+        return "{\"migration_plan_id\": \"" + migrationPlanId + "\"}";
     }
 
     @Override

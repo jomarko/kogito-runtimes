@@ -256,19 +256,14 @@ public class PostgresqlProcessInstances<T extends Model> implements MutableProce
     public String createMigrationPlan(String sourceProcessId, String sourceProcessVersion, String targetProcessId,
             String targetProcessVersion, String nodeMappingJson) {
         try {
-            Tuple tuple = Tuple.of(UUID.randomUUID().toString(), sourceProcessId, sourceProcessVersion, targetProcessId, targetProcessVersion, nodeMappingJson);
-            Future<RowSet<Row>> future = client.preparedQuery(INSERT_MIGRATION_PLAN).execute(tuple);
-            getExecutedResult(future);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw uncheckedException(e, "Error inserting migration plan from process %s %s to process %s %s",
-                    sourceProcessId, sourceProcessVersion, targetProcessId, targetProcessVersion);
+            final String migrationPlanId = UUID.randomUUID().toString();
+            Tuple tuple = Tuple.of(migrationPlanId, sourceProcessId, sourceProcessVersion, targetProcessId, targetProcessVersion, nodeMappingJson);
+            client.preparedQuery(INSERT_MIGRATION_PLAN).execute(tuple);
+            return "{\"migration_plan_id\": \"" + migrationPlanId + "\"}";
         } catch (Exception e) {
             throw uncheckedException(e, "Error inserting migration plan from process %s %s to process %s %s",
                     sourceProcessId, sourceProcessVersion, targetProcessId, targetProcessVersion);
         }
-
-        return "DONE";
     }
 
     @Override

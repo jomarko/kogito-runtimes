@@ -65,7 +65,7 @@ abstract class Repository {
 
     abstract void insertInternal(String processId, String processVersion, UUID id, byte[] payload, String businessKey, String[] eventTypes);
 
-    abstract void insertMigrationPlanInternal(String sourceProcessId, String sourceProcessVersion, String targetProcessId, String targetProcessVersion, String nodeMappingJson);
+    abstract String insertMigrationPlanInternal(String sourceProcessId, String sourceProcessVersion, String targetProcessId, String targetProcessVersion, String nodeMappingJson);
 
     abstract void updateInternal(String processId, String processVersion, UUID id, byte[] payload, String[] eventTypes);
 
