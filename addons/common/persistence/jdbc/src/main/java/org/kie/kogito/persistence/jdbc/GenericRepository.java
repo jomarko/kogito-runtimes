@@ -39,6 +39,7 @@ import javax.sql.DataSource;
 import org.jbpm.flow.migration.model.MigrationPlan;
 import org.jbpm.flow.migration.model.ProcessDefinitionMigrationPlan;
 import org.jbpm.flow.migration.model.ProcessInstanceMigrationPlan;
+import org.kie.kogito.process.MigrationPlanInterface;
 
 public class GenericRepository extends Repository {
 
@@ -199,13 +200,14 @@ public class GenericRepository extends Repository {
     }
 
     private MigrationPlan migrationPlanRecordFrom(ResultSet rs) throws SQLException {
-        // TODO
+
         return new MigrationPlan() {
             {
                 setProcessMigrationPlan(new ProcessInstanceMigrationPlan() {
                     {
                         setSourceProcessDefinition(new ProcessDefinitionMigrationPlan(rs.getString(SOURCE_PROCESS_ID), rs.getString(SOURCE_PROCESS_VERSION)));
                         setTargetProcessDefinition(new ProcessDefinitionMigrationPlan(rs.getString(TARGET_PROCESS_ID), rs.getString(TARGET_PROCESS_VERSION)));
+                        // TODO
                         setNodeInstanceMigrationPlan(new ArrayList<>());
                     }
                 });
@@ -256,18 +258,18 @@ public class GenericRepository extends Repository {
     }
 
     @Override
-    int findAllMigrationPlanByProcessIdInternal(String processId) {
+    Stream<MigrationPlanInterface> findAllMigrationPlanByProcessIdInternal(String processId) {
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement = connection.prepareStatement(FIND_ALL_MIGRATION_PLAN);) {
             statement.setString(1, processId);
 
-            List<MigrationPlan> data = new ArrayList<>();
+            List<MigrationPlanInterface> data = new ArrayList<>();
             ResultSet resultSet = statement.executeQuery();
             while (resultSet.next()) {
                 data.add(migrationPlanRecordFrom(resultSet));
             }
             resultSet.close();
-            return data.size();
+            return data.stream();
         } catch (SQLException e) {
             throw uncheckedException(e, "Error finding all migration plans for processId %s", processId);
         }

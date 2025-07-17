@@ -30,6 +30,7 @@ import org.jbpm.flow.serialization.MarshallerContextName;
 import org.jbpm.flow.serialization.ProcessInstanceMarshallerService;
 import org.kie.kogito.Model;
 import org.kie.kogito.internal.process.runtime.HeadersPersistentConfig;
+import org.kie.kogito.process.MigrationPlanInterface;
 import org.kie.kogito.process.MutableProcessInstances;
 import org.kie.kogito.process.Process;
 import org.kie.kogito.process.ProcessInstance;
@@ -177,7 +178,7 @@ public class JDBCProcessInstances<T extends Model> implements MutableProcessInst
     }
 
     @Override
-    public int findMigrationPlanByProcessIdCount(String processId) {
+    public Stream<MigrationPlanInterface> findMigrationPlanByProcessId(String processId) {
 
         return repository.findAllMigrationPlanByProcessIdInternal(processId);
     }

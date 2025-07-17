@@ -18,11 +18,16 @@
  */
 package org.jbpm.flow.migration.model;
 
+import java.util.Collections;
 import java.util.Objects;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.kie.kogito.process.MigrationPlanInterface;
 
-public class MigrationPlan {
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+public class MigrationPlan implements MigrationPlanInterface {
 
     private String name;
 
@@ -39,6 +44,36 @@ public class MigrationPlan {
     @JsonIgnore
     public ProcessDefinitionMigrationPlan getSource() {
         return this.processMigrationPlan.getSourceProcessDefinition();
+    }
+
+    @Override
+    public String nodeMappingJson() {
+        try {
+            return new ObjectMapper().writeValueAsString(processMigrationPlan.getNodeInstanceMigrationPlan() != null ? processMigrationPlan.getNodeInstanceMigrationPlan() : Collections.emptyList());
+        } catch (JsonProcessingException e) {
+            return "[]"; // return empty array in case of error
+        }
+    }
+
+    @Override
+    public String sourceProcessId() {
+        return processMigrationPlan.getSourceProcessDefinition().getProcessId();
+    }
+
+    @Override
+    public String sourceProcessVersion() {
+        return processMigrationPlan.getSourceProcessDefinition().getProcessVersion();
+
+    }
+
+    @Override
+    public String targetProcessId() {
+        return processMigrationPlan.getTargetProcessDefinition().getProcessId();
+    }
+
+    @Override
+    public String targetProcessVersion() {
+        return processMigrationPlan.getTargetProcessDefinition().getProcessVersion();
     }
 
     public String getName() {

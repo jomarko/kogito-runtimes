@@ -20,6 +20,7 @@ package org.kie.kogito.persistence.postgresql;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -32,10 +33,14 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.jbpm.flow.migration.model.MigrationPlan;
+import org.jbpm.flow.migration.model.ProcessDefinitionMigrationPlan;
+import org.jbpm.flow.migration.model.ProcessInstanceMigrationPlan;
 import org.jbpm.flow.serialization.MarshallerContextName;
 import org.jbpm.flow.serialization.ProcessInstanceMarshallerService;
 import org.kie.kogito.Model;
 import org.kie.kogito.internal.process.runtime.HeadersPersistentConfig;
+import org.kie.kogito.process.MigrationPlanInterface;
 import org.kie.kogito.process.MutableProcessInstances;
 import org.kie.kogito.process.Process;
 import org.kie.kogito.process.ProcessInstance;
@@ -175,6 +180,20 @@ public class PostgresqlProcessInstances<T extends Model> implements MutableProce
         return instance;
     }
 
+    private MigrationPlan unmarshallMigrationPlan(Row r) {
+        MigrationPlan mp = new MigrationPlan();
+        mp.setProcessMigrationPlan(new ProcessInstanceMigrationPlan() {
+            {
+                setSourceProcessDefinition(new ProcessDefinitionMigrationPlan(r.getString("source_process_id"), r.getString("source_process_version")));
+                setTargetProcessDefinition(new ProcessDefinitionMigrationPlan(r.getString("target_process_id"), r.getString("target_process_version")));
+                // TODO
+                setNodeInstanceMigrationPlan(Collections.emptyList());
+            }
+        });
+
+        return mp;
+    }
+
     @Override
     public boolean lock() {
         return this.lock;
@@ -267,10 +286,13 @@ public class PostgresqlProcessInstances<T extends Model> implements MutableProce
     }
 
     @Override
-    public int findMigrationPlanByProcessIdCount(String processId) {
+    public Stream<MigrationPlanInterface> findMigrationPlanByProcessId(String processId) {
         try {
             Tuple parameters = tuple(processId);
-            return getResultFromFuture(client.preparedQuery(FIND_ALL_MIGRATION_PLAN).execute(parameters)).map(RowSet::rowCount).orElse(0);
+
+            return getResultFromFuture(client.preparedQuery(FIND_ALL_MIGRATION_PLAN).execute(parameters))
+                    .map(r -> StreamSupport.stream(r.spliterator(), false)).orElse(Stream.empty())
+                    .map(row -> unmarshallMigrationPlan(row));
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

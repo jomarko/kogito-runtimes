@@ -22,6 +22,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import org.kie.kogito.process.MigrationPlanInterface;
+
 abstract class Repository {
 
     static final String INSERT = "INSERT INTO process_instances (id, payload, process_id, process_version, version) VALUES (?, ?, ?, ?, ?)";
@@ -79,7 +81,7 @@ abstract class Repository {
 
     abstract Stream<Record> findAllInternal(String processId, String processVersion);
 
-    abstract int findAllMigrationPlanByProcessIdInternal(String processId);
+    abstract Stream<MigrationPlanInterface> findAllMigrationPlanByProcessIdInternal(String processId);
 
     abstract Stream<Record> findAllInternalWaitingFor(String id, String version, String eventType);
 

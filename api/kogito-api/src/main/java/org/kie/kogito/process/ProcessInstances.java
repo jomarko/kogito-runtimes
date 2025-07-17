@@ -45,7 +45,7 @@ public interface ProcessInstances<T> {
         throw new UnsupportedOperationException();
     }
 
-    default int findMigrationPlanByProcessIdCount(String processId) {
+    default Stream<MigrationPlanInterface> findMigrationPlanByProcessId(String processId) {
         throw new UnsupportedOperationException();
     }
 
