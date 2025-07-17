@@ -24,6 +24,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
@@ -37,9 +38,13 @@ import java.util.stream.StreamSupport;
 import javax.sql.DataSource;
 
 import org.jbpm.flow.migration.model.MigrationPlan;
+import org.jbpm.flow.migration.model.NodeInstanceMigrationPlan;
 import org.jbpm.flow.migration.model.ProcessDefinitionMigrationPlan;
 import org.jbpm.flow.migration.model.ProcessInstanceMigrationPlan;
 import org.kie.kogito.process.MigrationPlanInterface;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class GenericRepository extends Repository {
 
@@ -199,20 +204,25 @@ public class GenericRepository extends Repository {
         return new Record(rs.getBytes(PAYLOAD), rs.getLong(VERSION));
     }
 
-    private MigrationPlan migrationPlanRecordFrom(ResultSet rs) throws SQLException {
+    private MigrationPlan migrationPlanRecordFrom(ResultSet rs) {
 
-        return new MigrationPlan() {
-            {
-                setProcessMigrationPlan(new ProcessInstanceMigrationPlan() {
-                    {
-                        setSourceProcessDefinition(new ProcessDefinitionMigrationPlan(rs.getString(SOURCE_PROCESS_ID), rs.getString(SOURCE_PROCESS_VERSION)));
-                        setTargetProcessDefinition(new ProcessDefinitionMigrationPlan(rs.getString(TARGET_PROCESS_ID), rs.getString(TARGET_PROCESS_VERSION)));
-                        // TODO
-                        setNodeInstanceMigrationPlan(new ArrayList<>());
-                    }
-                });
-            }
-        };
+        try {
+            return new MigrationPlan() {
+                {
+                    setProcessMigrationPlan(new ProcessInstanceMigrationPlan() {
+                        {
+                            setSourceProcessDefinition(new ProcessDefinitionMigrationPlan(rs.getString(SOURCE_PROCESS_ID), rs.getString(SOURCE_PROCESS_VERSION)));
+                            setTargetProcessDefinition(new ProcessDefinitionMigrationPlan(rs.getString(TARGET_PROCESS_ID), rs.getString(TARGET_PROCESS_VERSION)));
+                            setNodeInstanceMigrationPlan(Arrays.asList(new ObjectMapper().readValue(rs.getString(NODE_MAPPING), NodeInstanceMigrationPlan[].class)));
+                        }
+                    });
+                }
+            };
+        } catch (JsonProcessingException e) {
+            throw uncheckedException(e, "Error migration unmarshalling");
+        } catch (SQLException e) {
+            throw uncheckedException(e, "Error migration unmarshalling");
+        }
     }
 
     @Override
