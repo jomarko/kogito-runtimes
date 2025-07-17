@@ -36,10 +36,21 @@ import java.util.stream.StreamSupport;
 
 import javax.sql.DataSource;
 
+import org.jbpm.flow.migration.model.MigrationPlan;
+import org.jbpm.flow.migration.model.ProcessDefinitionMigrationPlan;
+import org.jbpm.flow.migration.model.ProcessInstanceMigrationPlan;
+
 public class GenericRepository extends Repository {
 
     private static final String PAYLOAD = "payload";
     private static final String VERSION = "version";
+    private static final String ID = "id";
+    private static final String SOURCE_PROCESS_ID = "source_process_id";
+    private static final String SOURCE_PROCESS_VERSION = "source_process_version";
+    private static final String TARGET_PROCESS_ID = "target_process_id";
+    private static final String TARGET_PROCESS_VERSION = "target_process_version";
+    private static final String NODE_MAPPING = "node_mapping";
+    private static final String CREATED_AT = "created_at";
 
     private final DataSource dataSource;
 
@@ -84,8 +95,8 @@ public class GenericRepository extends Repository {
 
     @Override
     void insertMigrationPlanInternal(String sourceProcessId, String sourceProcessVersion, String targetProcessId, String targetProcessVersion, String nodeMappingJson) {
-        try (Connection connection = dataSource.getConnection()) {
-            PreparedStatement statement = connection.prepareStatement(INSERT_MIGRATION_PLAN);
+        try (Connection connection = dataSource.getConnection(); PreparedStatement statement = connection.prepareStatement(INSERT_MIGRATION_PLAN);) {
+
             statement.setString(1, UUID.randomUUID().toString());
 
             statement.setString(2, sourceProcessId);
@@ -184,6 +195,21 @@ public class GenericRepository extends Repository {
         return new Record(rs.getBytes(PAYLOAD), rs.getLong(VERSION));
     }
 
+    private MigrationPlan migrationPlanRecordFrom(ResultSet rs) throws SQLException {
+        // TODO
+        return new MigrationPlan() {
+            {
+                setProcessMigrationPlan(new ProcessInstanceMigrationPlan() {
+                    {
+                        setSourceProcessDefinition(new ProcessDefinitionMigrationPlan(rs.getString(SOURCE_PROCESS_ID), rs.getString(SOURCE_PROCESS_VERSION)));
+                        setTargetProcessDefinition(new ProcessDefinitionMigrationPlan(rs.getString(TARGET_PROCESS_ID), rs.getString(TARGET_PROCESS_VERSION)));
+                        setNodeInstanceMigrationPlan(new ArrayList<>());
+                    }
+                });
+            }
+        };
+    }
+
     @Override
     Optional<Record> findByIdInternal(String processId, String processVersion, UUID id) {
         try (Connection connection = dataSource.getConnection();
@@ -223,6 +249,24 @@ public class GenericRepository extends Repository {
             return data.stream();
         } catch (SQLException e) {
             throw uncheckedException(e, "Error finding all process instances, for processId %s waiting for %s", processId, eventType);
+        }
+    }
+
+    @Override
+    int findAllMigrationPlanByProcessIdInternal(String processId) {
+        try (Connection connection = dataSource.getConnection();
+                PreparedStatement statement = connection.prepareStatement(FIND_ALL_MIGRATION_PLAN);) {
+            statement.setString(1, processId);
+
+            List<MigrationPlan> data = new ArrayList<>();
+            ResultSet resultSet = statement.executeQuery();
+            while (resultSet.next()) {
+                data.add(migrationPlanRecordFrom(resultSet));
+            }
+            resultSet.close();
+            return data.size();
+        } catch (SQLException e) {
+            throw uncheckedException(e, "Error finding all migration plans for processId %s", processId);
         }
     }
 

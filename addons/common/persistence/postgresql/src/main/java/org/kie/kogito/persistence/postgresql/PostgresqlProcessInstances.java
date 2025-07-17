@@ -64,6 +64,8 @@ public class PostgresqlProcessInstances<T extends Model> implements MutableProce
     private static final String DELETE = "DELETE FROM process_instances WHERE process_id = $1 and id = $2 and process_version ";
     private static final String FIND_BY_ID = "SELECT payload, version FROM process_instances WHERE process_id = $1 and id = $2 and process_version ";
     private static final String FIND_ALL = "SELECT payload, version FROM process_instances WHERE process_id = $1 and process_version ";
+    private static final String FIND_ALL_MIGRATION_PLAN =
+            "SELECT id, source_process_id, source_process_version, target_process_id, target_process_version, node_mapping, created_at FROM migration_plans WHERE source_process_id = $1";
     private static final String UPDATE_WITH_LOCK = "UPDATE process_instances SET payload = $1, version = $2 WHERE process_id = $3 and id = $4 and version = $5 and process_version ";
     private static final String MIGRATE_BULK = "UPDATE process_instances SET process_id = $1, process_version = $2 WHERE process_id = $3 and process_version ";
     private static final String MIGRATE_INSTANCE = "UPDATE process_instances SET process_id = $1, process_version = $2 WHERE process_id = $3 and id = ANY ($4) and process_version ";
@@ -267,6 +269,20 @@ public class PostgresqlProcessInstances<T extends Model> implements MutableProce
         }
 
         return "DONE";
+    }
+
+    @Override
+    public int findMigrationPlanByProcessIdCount(String processId) {
+        try {
+            Tuple parameters = tuple(processId);
+            return getResultFromFuture(client.preparedQuery(FIND_ALL_MIGRATION_PLAN).execute(parameters)).map(RowSet::rowCount).orElse(0);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw uncheckedException(e, "Error finding all migration plans for processId %s", processId);
+        } catch (ExecutionException | TimeoutException e) {
+            throw uncheckedException(e, "Error finding all migration plans for processId %s", processId);
+        }
     }
 
     private boolean updateInternal(String id, byte[] payload, String[] eventTypes) {

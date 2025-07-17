@@ -176,4 +176,10 @@ public class JDBCProcessInstances<T extends Model> implements MutableProcessInst
         return "DONE";
     }
 
+    @Override
+    public int findMigrationPlanByProcessIdCount(String processId) {
+
+        return repository.findAllMigrationPlanByProcessIdInternal(processId);
+    }
+
 }

@@ -28,7 +28,6 @@ import org.jbpm.flow.migration.model.NodeInstanceMigrationPlan;
 import org.jbpm.flow.migration.model.ProcessDefinitionMigrationPlan;
 import org.jbpm.flow.migration.model.ProcessInstanceMigrationPlan;
 import org.jbpm.ruleflow.core.Metadata;
-import org.jbpm.ruleflow.core.WorkflowElementIdentifierFactory;
 import org.jbpm.workflow.core.Node;
 import org.jbpm.workflow.core.WorkflowProcess;
 import org.kie.kogito.Application;
@@ -167,16 +166,16 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
                 return notFoundResponse(String.format(PROCESS_NOT_FOUND, processId));
             }
 
-            // Mock up
-            ProcessInstanceMigrationPlan migrationPlan = new ProcessInstanceMigrationPlan();
-            migrationPlan.setSourceProcessDefinition(new ProcessDefinitionMigrationPlan(processId, "1.0"));
-            migrationPlan.setTargetProcessDefinition(new ProcessDefinitionMigrationPlan("target_process_id", "target_process_version"));
-            List<NodeInstanceMigrationPlan> nodeList = new LinkedList<NodeInstanceMigrationPlan>();
-            nodeList.add(new NodeInstanceMigrationPlan(new WorkflowElementIdentifierFactory("source_node_id"), new WorkflowElementIdentifierFactory("target_node_id")));
-            migrationPlan.setNodeInstanceMigrationPlan(nodeList);
+            // // Mock up
+            // ProcessInstanceMigrationPlan migrationPlan = new ProcessInstanceMigrationPlan();
+            // migrationPlan.setSourceProcessDefinition(new ProcessDefinitionMigrationPlan(processId, "1.0"));
+            // migrationPlan.setTargetProcessDefinition(new ProcessDefinitionMigrationPlan("target_process_id", "target_process_version"));
+            // List<NodeInstanceMigrationPlan> nodeList = new LinkedList<NodeInstanceMigrationPlan>();
+            // nodeList.add(new NodeInstanceMigrationPlan(new WorkflowElementIdentifierFactory("source_node_id"), new WorkflowElementIdentifierFactory("target_node_id")));
+            // migrationPlan.setNodeInstanceMigrationPlan(nodeList);
 
             Map<String, Object> message = new HashMap<>();
-            message.put("migrationPlan", migrationPlan);
+            message.put("migrationPlanCount", sourceProcess.instances().findMigrationPlanByProcessIdCount(processId));
 
             ObjectMapper objectMapper = new ObjectMapper();
             return buildOkResponse(objectMapper.writeValueAsString(message));
@@ -208,24 +207,19 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
             }
 
             ProcessInstanceMigrationPlan migrationPlan = new ProcessInstanceMigrationPlan();
-            migrationPlan.setSourceProcessDefinition(new ProcessDefinitionMigrationPlan(processId, "1.0"));
+            migrationPlan.setSourceProcessDefinition(new ProcessDefinitionMigrationPlan(processId, sourceProcess.version()));
             migrationPlan.setTargetProcessDefinition(new ProcessDefinitionMigrationPlan(migrationSpec.getTargetProcessId(), migrationSpec.getTargetProcessVersion()));
             migrationPlan.setNodeInstanceMigrationPlan(migrationSpec.getNodeMapping());
 
-            long numberOfProcessInstanceMigrated = sourceProcess.instances().migrateAll(migrationSpec.getTargetProcessId(), migrationSpec.getTargetProcessVersion());
-            Map<String, Object> message = new HashMap<>();
-            message.put("migrationPlan", migrationPlan);
-            message.put("numberOfProcessInstanceMigrated", numberOfProcessInstanceMigrated);
             ObjectMapper objectMapper = new ObjectMapper();
 
-            // TODO
             sourceProcess.instances().createMigrationPlan(processId,
                     sourceProcess.version(),
                     migrationSpec.getTargetProcessId(),
                     migrationSpec.getTargetProcessVersion(),
                     objectMapper.writeValueAsString(migrationSpec.getNodeMapping() == null ? Collections.emptyList() : migrationSpec.getNodeMapping()));
 
-            return buildOkResponse(objectMapper.writeValueAsString(message));
+            return buildOkResponse(objectMapper.writeValueAsString(migrationPlan));
         } catch (Exception e) {
             return badRequestResponse(e.getMessage());
         }

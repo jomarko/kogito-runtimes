@@ -41,15 +41,11 @@ public interface ProcessInstances<T> {
         throw new UnsupportedOperationException();
     }
 
-    /**
-     * TODO Here is a question, what should be the method signature
-     * this module can not access any of:
-     * - `MigrationPlan`
-     * - `MigrationPlanFile`
-     * - `ProcessInstanceMigrationPlan`
-     * - `ProcessMigrationSpec`
-     */
     default String createMigrationPlan(String sourceProcessId, String sourceProcessVersion, String targetProcessId, String targetProcessVersion, String nodeMappingJson) {
+        throw new UnsupportedOperationException();
+    }
+
+    default int findMigrationPlanByProcessIdCount(String processId) {
         throw new UnsupportedOperationException();
     }
 
