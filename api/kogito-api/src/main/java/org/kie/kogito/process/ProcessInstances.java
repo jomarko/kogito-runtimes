@@ -41,6 +41,14 @@ public interface ProcessInstances<T> {
         throw new UnsupportedOperationException();
     }
 
+    default String createMigrationPlan(String sourceProcessId, String sourceProcessVersion, String targetProcessId, String targetProcessVersion, String nodeMappingJson) {
+        throw new UnsupportedOperationException();
+    }
+
+    default Stream<MigrationPlanInterface> findMigrationPlanByProcessId(String processId) {
+        throw new UnsupportedOperationException();
+    }
+
     default Optional<ProcessInstance<T>> findByBusinessKey(String id, ProcessInstanceReadMode mode) {
         return stream(mode).filter(pi -> id.equals(pi.businessKey())).findAny();
     }

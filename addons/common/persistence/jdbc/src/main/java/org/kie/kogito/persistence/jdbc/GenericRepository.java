@@ -24,6 +24,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
@@ -36,10 +37,26 @@ import java.util.stream.StreamSupport;
 
 import javax.sql.DataSource;
 
+import org.jbpm.flow.migration.model.MigrationPlan;
+import org.jbpm.flow.migration.model.NodeInstanceMigrationPlan;
+import org.jbpm.flow.migration.model.ProcessDefinitionMigrationPlan;
+import org.jbpm.flow.migration.model.ProcessInstanceMigrationPlan;
+import org.kie.kogito.process.MigrationPlanInterface;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 public class GenericRepository extends Repository {
 
     private static final String PAYLOAD = "payload";
     private static final String VERSION = "version";
+    private static final String ID = "id";
+    private static final String SOURCE_PROCESS_ID = "source_process_id";
+    private static final String SOURCE_PROCESS_VERSION = "source_process_version";
+    private static final String TARGET_PROCESS_ID = "target_process_id";
+    private static final String TARGET_PROCESS_VERSION = "target_process_version";
+    private static final String NODE_MAPPING = "node_mapping";
+    private static final String CREATED_AT = "created_at";
 
     private final DataSource dataSource;
 
@@ -79,6 +96,27 @@ public class GenericRepository extends Repository {
             }
         } catch (Exception e) {
             throw uncheckedException(e, "Error inserting process instance id: %s, processId: %s processVersion: %s business key: %s", id, processId, processVersion, businessKey);
+        }
+    }
+
+    @Override
+    String insertMigrationPlanInternal(String sourceProcessId, String sourceProcessVersion, String targetProcessId, String targetProcessVersion, String nodeMappingJson) {
+        try (Connection connection = dataSource.getConnection(); PreparedStatement statement = connection.prepareStatement(INSERT_MIGRATION_PLAN);) {
+            final String migrationPlanId = UUID.randomUUID().toString();
+            statement.setString(1, migrationPlanId);
+
+            statement.setString(2, sourceProcessId);
+            statement.setString(3, sourceProcessVersion);
+            statement.setString(4, targetProcessId);
+            statement.setString(5, targetProcessVersion);
+            statement.setString(6, nodeMappingJson);
+
+            statement.executeUpdate();
+
+            return migrationPlanId;
+
+        } catch (Exception e) {
+            throw uncheckedException(e, "Error inserting migration plan from process %s-%s to %s-%s", sourceProcessId, sourceProcessVersion, targetProcessId, targetProcessVersion);
         }
     }
 
@@ -166,6 +204,27 @@ public class GenericRepository extends Repository {
         return new Record(rs.getBytes(PAYLOAD), rs.getLong(VERSION));
     }
 
+    private MigrationPlan migrationPlanRecordFrom(final ResultSet rs) {
+
+        try {
+            return new MigrationPlan() {
+                {
+                    setProcessMigrationPlan(new ProcessInstanceMigrationPlan() {
+                        {
+                            setSourceProcessDefinition(new ProcessDefinitionMigrationPlan(rs.getString(SOURCE_PROCESS_ID), rs.getString(SOURCE_PROCESS_VERSION)));
+                            setTargetProcessDefinition(new ProcessDefinitionMigrationPlan(rs.getString(TARGET_PROCESS_ID), rs.getString(TARGET_PROCESS_VERSION)));
+                            setNodeInstanceMigrationPlan(Arrays.asList(new ObjectMapper().readValue(rs.getString(NODE_MAPPING), NodeInstanceMigrationPlan[].class)));
+                        }
+                    });
+                }
+            };
+        } catch (JsonProcessingException e) {
+            throw uncheckedException(e, "Error migration unmarshalling");
+        } catch (SQLException e) {
+            throw uncheckedException(e, "Error migration unmarshalling");
+        }
+    }
+
     @Override
     Optional<Record> findByIdInternal(String processId, String processVersion, UUID id) {
         try (Connection connection = dataSource.getConnection();
@@ -205,6 +264,24 @@ public class GenericRepository extends Repository {
             return data.stream();
         } catch (SQLException e) {
             throw uncheckedException(e, "Error finding all process instances, for processId %s waiting for %s", processId, eventType);
+        }
+    }
+
+    @Override
+    Stream<MigrationPlanInterface> findAllMigrationPlanByProcessIdInternal(String processId) {
+        try (Connection connection = dataSource.getConnection();
+                PreparedStatement statement = connection.prepareStatement(FIND_ALL_MIGRATION_PLAN);) {
+            statement.setString(1, processId);
+
+            List<MigrationPlanInterface> data = new ArrayList<>();
+            ResultSet resultSet = statement.executeQuery();
+            while (resultSet.next()) {
+                data.add(migrationPlanRecordFrom(resultSet));
+            }
+            resultSet.close();
+            return data.stream();
+        } catch (SQLException e) {
+            throw uncheckedException(e, "Error finding all migration plans for processId %s", processId);
         }
     }
 

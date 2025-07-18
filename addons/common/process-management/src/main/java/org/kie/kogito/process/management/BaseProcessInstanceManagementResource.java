@@ -23,6 +23,10 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.jbpm.flow.migration.MigrationPlanProvider;
+import org.jbpm.flow.migration.model.NodeInstanceMigrationPlan;
+import org.jbpm.flow.migration.model.ProcessDefinitionMigrationPlan;
+import org.jbpm.flow.migration.model.ProcessInstanceMigrationPlan;
 import org.jbpm.ruleflow.core.Metadata;
 import org.jbpm.workflow.core.Node;
 import org.jbpm.workflow.core.WorkflowProcess;
@@ -30,6 +34,8 @@ import org.kie.kogito.Application;
 import org.kie.kogito.Model;
 import org.kie.kogito.internal.process.runtime.KogitoNodeInstance;
 import org.kie.kogito.internal.process.runtime.KogitoWorkflowProcess;
+import org.kie.kogito.process.MigrationPlanInterface;
+import org.kie.kogito.process.MigrationPlanServiceNew;
 import org.kie.kogito.process.Process;
 import org.kie.kogito.process.ProcessError;
 import org.kie.kogito.process.ProcessInstance;
@@ -39,7 +45,9 @@ import org.kie.kogito.process.WorkItem;
 import org.kie.kogito.process.impl.AbstractProcess;
 import org.kie.kogito.services.uow.UnitOfWorkExecutor;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public abstract class BaseProcessInstanceManagementResource<T> implements ProcessInstanceManagement<T> {
 
@@ -49,17 +57,36 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
     private static final String PROCESS_INSTANCE_NOT_FOUND = "Process instance with id %s not found";
     private static final String PROCESS_INSTANCE_NOT_IN_ERROR = "Process instance with id %s is not in error state";
 
+    private MigrationPlanProvider migrationPlanProvider = new MigrationPlanProvider.MigrationPlanProviderBuilder().withEnvironmentDefaults().build();
+
+    private Supplier<MigrationPlanServiceNew> mpsn;
     private Supplier<Processes> processes;
 
     private Application application;
 
-    public BaseProcessInstanceManagementResource(Processes processes, Application application) {
-        this(() -> processes, application);
+    public BaseProcessInstanceManagementResource(MigrationPlanServiceNew mpsn, Processes processes, Application application) {
+        this(() -> mpsn, () -> processes, application);
     }
 
-    public BaseProcessInstanceManagementResource(Supplier<Processes> processes, Application application) {
+    public BaseProcessInstanceManagementResource(Supplier<MigrationPlanServiceNew> mpsn, Supplier<Processes> processes, Application application) {
+        this.mpsn = mpsn;
         this.processes = processes;
         this.application = application;
+    }
+
+    public T doGetMigrationPlanById(String migrationPlanId) {
+        MigrationPlanInterface result = mpsn.get().findMigrationPlanById(migrationPlanId);
+        if (result != null) {
+            try {
+                return buildOkResponse(new ObjectMapper().writeValueAsString(result));
+            } catch (JsonProcessingException e) {
+                return badRequestResponse(String.format("Migration plan with id '%s' can nto be loaded: %s", migrationPlanId, e.getMessage()));
+            }
+        } else {
+            // TODO not usre if 404 should be returned
+            // OR 200 with empty result
+            return notFoundResponse(String.format("Migration plan with id '%s' not found", migrationPlanId));
+        }
     }
 
     public T doGetProcesses() {
@@ -146,6 +173,66 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
             message.put("message", "All instances migrated");
             message.put("numberOfProcessInstanceMigrated", numberOfProcessInstanceMigrated);
             return buildOkResponse(message);
+        } catch (Exception e) {
+            return badRequestResponse(e.getMessage());
+        }
+    }
+
+    public T doGetMigrationPlan(String processId) {
+        try {
+            Process<? extends Model> sourceProcess = processes.get().processById(processId);
+            if (sourceProcess == null) {
+                // Add error message;
+                return notFoundResponse(String.format(PROCESS_NOT_FOUND, processId));
+            }
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            return buildOkResponse(objectMapper.writeValueAsString(sourceProcess.instances().findMigrationPlanByProcessId(processId).collect(Collectors.toList())));
+        } catch (Exception e) {
+            return badRequestResponse(e.getMessage());
+        }
+    }
+
+    public T doCreateMigrationPlan(String processId, ProcessMigrationSpec migrationSpec) {
+        try {
+            // TODO: Build MP JSON from migrationSpec;
+
+            Process<? extends Model> sourceProcess = processes.get().processById(processId);
+            if (sourceProcess == null) {
+                // Add error message;
+                return notFoundResponse(String.format(PROCESS_NOT_FOUND, processId));
+            }
+
+            Process<? extends Model> targetProcess = processes.get().processById(migrationSpec.getTargetProcessId());
+            if (targetProcess == null) {
+                // Add error message;
+                return notFoundResponse(String.format(PROCESS_NOT_FOUND, migrationSpec.getTargetProcessId()));
+            }
+
+            List<NodeInstanceMigrationPlan> nodeMapping = migrationSpec.getNodeMapping();
+            for (NodeInstanceMigrationPlan nodes : nodeMapping) {
+                if (sourceProcess.findNodes(nodeInstance -> nodeInstance.getUniqueId().equals(nodes.getSourceNodeIdString())).size() != 1) {
+                    return badRequestResponse(String.format("Source node '%s' not found in process '%s'", nodes.getSourceNodeIdString(), processId));
+                }
+                if (targetProcess.findNodes(nodeInstance -> nodeInstance.getUniqueId().equals(nodes.getTargetNodeIdString())).size() != 1) {
+                    return badRequestResponse(String.format("Target node '%s' not found in process '%s'", nodes.getTargetNodeIdString(), migrationSpec.getTargetProcessId()));
+                }
+            }
+
+            ProcessInstanceMigrationPlan migrationPlan = new ProcessInstanceMigrationPlan();
+            migrationPlan.setSourceProcessDefinition(new ProcessDefinitionMigrationPlan(processId, sourceProcess.version()));
+            migrationPlan.setTargetProcessDefinition(new ProcessDefinitionMigrationPlan(migrationSpec.getTargetProcessId(), migrationSpec.getTargetProcessVersion()));
+            migrationPlan.setNodeInstanceMigrationPlan(migrationSpec.getNodeMapping());
+
+            ObjectMapper objectMapper = new ObjectMapper();
+
+            String response = sourceProcess.instances().createMigrationPlan(processId,
+                    sourceProcess.version(),
+                    migrationSpec.getTargetProcessId(),
+                    migrationSpec.getTargetProcessVersion(),
+                    objectMapper.writeValueAsString(migrationSpec.getNodeMapping() == null ? Collections.emptyList() : migrationSpec.getNodeMapping()));
+
+            return buildOkResponse(response);
         } catch (Exception e) {
             return badRequestResponse(e.getMessage());
         }

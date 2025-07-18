@@ -20,10 +20,12 @@ package org.kie.kogito.persistence.postgresql;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -31,10 +33,14 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.jbpm.flow.migration.model.MigrationPlan;
+import org.jbpm.flow.migration.model.ProcessDefinitionMigrationPlan;
+import org.jbpm.flow.migration.model.ProcessInstanceMigrationPlan;
 import org.jbpm.flow.serialization.MarshallerContextName;
 import org.jbpm.flow.serialization.ProcessInstanceMarshallerService;
 import org.kie.kogito.Model;
 import org.kie.kogito.internal.process.runtime.HeadersPersistentConfig;
+import org.kie.kogito.process.MigrationPlanInterface;
 import org.kie.kogito.process.MutableProcessInstances;
 import org.kie.kogito.process.Process;
 import org.kie.kogito.process.ProcessInstance;
@@ -57,10 +63,14 @@ public class PostgresqlProcessInstances<T extends Model> implements MutableProce
 
     private static final String IS_NULL = "is null";
     private static final String INSERT = "INSERT INTO process_instances (id, payload, process_id, process_version, version) VALUES ($1, $2, $3, $4, $5)";
+    private static final String INSERT_MIGRATION_PLAN =
+            "INSERT INTO migration_plans (id, source_process_id, source_process_version, target_process_id, target_process_version, node_mapping) VALUES ($1, $2, $3, $4, $5, $6)";
     private static final String UPDATE = "UPDATE process_instances SET payload = $1 WHERE process_id = $2 and id = $3 and process_version ";
     private static final String DELETE = "DELETE FROM process_instances WHERE process_id = $1 and id = $2 and process_version ";
     private static final String FIND_BY_ID = "SELECT payload, version FROM process_instances WHERE process_id = $1 and id = $2 and process_version ";
     private static final String FIND_ALL = "SELECT payload, version FROM process_instances WHERE process_id = $1 and process_version ";
+    private static final String FIND_ALL_MIGRATION_PLAN =
+            "SELECT id, source_process_id, source_process_version, target_process_id, target_process_version, node_mapping, created_at FROM migration_plans WHERE source_process_id = $1";
     private static final String UPDATE_WITH_LOCK = "UPDATE process_instances SET payload = $1, version = $2 WHERE process_id = $3 and id = $4 and version = $5 and process_version ";
     private static final String MIGRATE_BULK = "UPDATE process_instances SET process_id = $1, process_version = $2 WHERE process_id = $3 and process_version ";
     private static final String MIGRATE_INSTANCE = "UPDATE process_instances SET process_id = $1, process_version = $2 WHERE process_id = $3 and id = ANY ($4) and process_version ";
@@ -170,6 +180,20 @@ public class PostgresqlProcessInstances<T extends Model> implements MutableProce
         return instance;
     }
 
+    private MigrationPlan unmarshallMigrationPlan(Row r) {
+        MigrationPlan mp = new MigrationPlan();
+        mp.setProcessMigrationPlan(new ProcessInstanceMigrationPlan() {
+            {
+                setSourceProcessDefinition(new ProcessDefinitionMigrationPlan(r.getString("source_process_id"), r.getString("source_process_version")));
+                setTargetProcessDefinition(new ProcessDefinitionMigrationPlan(r.getString("target_process_id"), r.getString("target_process_version")));
+                // TODO
+                setNodeInstanceMigrationPlan(Collections.emptyList());
+            }
+        });
+
+        return mp;
+    }
+
     @Override
     public boolean lock() {
         return this.lock;
@@ -244,6 +268,37 @@ public class PostgresqlProcessInstances<T extends Model> implements MutableProce
             throw uncheckedException(e, "Error deleting process instance %s", Arrays.toString(processIds));
         } catch (Exception e) {
             throw uncheckedException(e, "Error deleting process instance %s", Arrays.toString(processIds));
+        }
+    }
+
+    @Override
+    public String createMigrationPlan(String sourceProcessId, String sourceProcessVersion, String targetProcessId,
+            String targetProcessVersion, String nodeMappingJson) {
+        try {
+            final String migrationPlanId = UUID.randomUUID().toString();
+            Tuple tuple = Tuple.of(migrationPlanId, sourceProcessId, sourceProcessVersion, targetProcessId, targetProcessVersion, nodeMappingJson);
+            client.preparedQuery(INSERT_MIGRATION_PLAN).execute(tuple);
+            return "{\"migration_plan_id\": \"" + migrationPlanId + "\"}";
+        } catch (Exception e) {
+            throw uncheckedException(e, "Error inserting migration plan from process %s %s to process %s %s",
+                    sourceProcessId, sourceProcessVersion, targetProcessId, targetProcessVersion);
+        }
+    }
+
+    @Override
+    public Stream<MigrationPlanInterface> findMigrationPlanByProcessId(String processId) {
+        try {
+            Tuple parameters = tuple(processId);
+
+            return getResultFromFuture(client.preparedQuery(FIND_ALL_MIGRATION_PLAN).execute(parameters))
+                    .map(r -> StreamSupport.stream(r.spliterator(), false)).orElse(Stream.empty())
+                    .map(row -> unmarshallMigrationPlan(row));
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw uncheckedException(e, "Error finding all migration plans for processId %s", processId);
+        } catch (ExecutionException | TimeoutException e) {
+            throw uncheckedException(e, "Error finding all migration plans for processId %s", processId);
         }
     }
 

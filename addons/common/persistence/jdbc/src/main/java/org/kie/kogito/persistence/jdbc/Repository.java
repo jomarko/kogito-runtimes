@@ -22,11 +22,17 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import org.kie.kogito.process.MigrationPlanInterface;
+
 abstract class Repository {
 
     static final String INSERT = "INSERT INTO process_instances (id, payload, process_id, process_version, version) VALUES (?, ?, ?, ?, ?)";
+    static final String INSERT_MIGRATION_PLAN =
+            "INSERT INTO migration_plans (id, source_process_id, source_process_version, target_process_id, target_process_version, node_mapping) VALUES (?, ?, ?, ?, ?, ?)";
     static final String INSERT_BUSINESS_KEY = "INSERT INTO business_key_mapping (business_key,process_instance_id) VALUES (?,?)";
     static final String FIND_ALL = "SELECT payload, version FROM process_instances WHERE process_id = ?";
+    static final String FIND_ALL_MIGRATION_PLAN =
+            "SELECT id, source_process_id, source_process_version, target_process_id, target_process_version, node_mapping, created_at FROM migration_plans WHERE source_process_id = ?";
     static final String FIND_BY_ID = "SELECT payload, version FROM process_instances WHERE process_id = ? and id = ?";
     static final String FIND_BY_BUSINESS_KEY = "SELECT payload, version FROM process_instances INNER JOIN business_key_mapping ON id = process_instance_id WHERE business_key = ? and process_id = ?";
     static final String UPDATE = "UPDATE process_instances SET payload = ? WHERE process_id = ? and id = ?";
@@ -61,6 +67,8 @@ abstract class Repository {
 
     abstract void insertInternal(String processId, String processVersion, UUID id, byte[] payload, String businessKey, String[] eventTypes);
 
+    abstract String insertMigrationPlanInternal(String sourceProcessId, String sourceProcessVersion, String targetProcessId, String targetProcessVersion, String nodeMappingJson);
+
     abstract void updateInternal(String processId, String processVersion, UUID id, byte[] payload, String[] eventTypes);
 
     abstract boolean updateWithLock(String processId, String processVersion, UUID id, byte[] payload, long version, String[] eventTypes);
@@ -72,6 +80,8 @@ abstract class Repository {
     abstract Optional<Record> findByBusinessKey(String processId, String processVersion, String businessKey);
 
     abstract Stream<Record> findAllInternal(String processId, String processVersion);
+
+    abstract Stream<MigrationPlanInterface> findAllMigrationPlanByProcessIdInternal(String processId);
 
     abstract Stream<Record> findAllInternalWaitingFor(String id, String version, String eventType);
 

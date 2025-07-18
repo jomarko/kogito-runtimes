@@ -20,6 +20,8 @@ package org.kie.kogito.process.management;
 
 public interface ProcessInstanceManagement<T> {
 
+    T getMigrationPlanById(String migrationPlanId);
+
     T getProcesses();
 
     T getProcessInfo(String processId);
@@ -50,8 +52,11 @@ public interface ProcessInstanceManagement<T> {
 
     T migrateInstance(String processId, String processInstanceId, ProcessMigrationSpec migrationSpec);
 
+    T getMigrationPlan(String processId);
+
+    T createMigrationPlan(String processId, ProcessMigrationSpec migrationSpec);
+
     T updateNodeInstanceSla(String processId, String processInstanceId, String nodeInstanceId, SlaPayload SLAPayload);
 
     T updateProcessInstanceSla(String processId, String processInstanceId, SlaPayload SLAPayload);
-
 }

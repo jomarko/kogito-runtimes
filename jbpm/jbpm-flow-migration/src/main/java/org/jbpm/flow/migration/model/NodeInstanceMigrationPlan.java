@@ -22,10 +22,20 @@ import java.util.Objects;
 
 import org.kie.api.definition.process.WorkflowElementIdentifier;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class NodeInstanceMigrationPlan {
 
+    @JsonIgnore
     private WorkflowElementIdentifier sourceNodeId;
+    @JsonIgnore
     private WorkflowElementIdentifier targetNodeId;
+
+    @JsonProperty("sourceNodeId")
+    private String sourceNodeIdString;
+    @JsonProperty("targetNodeId")
+    private String targetNodeIdString;
 
     public NodeInstanceMigrationPlan() {
         // do nothing
@@ -50,6 +60,22 @@ public class NodeInstanceMigrationPlan {
 
     public void setTargetNodeId(WorkflowElementIdentifier targetNodeId) {
         this.targetNodeId = targetNodeId;
+    }
+
+    public String getSourceNodeIdString() {
+        return sourceNodeIdString;
+    }
+
+    public void setSourceNodeIdString(String sourceNodeIdString) {
+        this.sourceNodeIdString = sourceNodeIdString;
+    }
+
+    public String getTargetNodeIdString() {
+        return targetNodeIdString;
+    }
+
+    public void setTargetNodeIdString(String targetNodeIdString) {
+        this.targetNodeIdString = targetNodeIdString;
     }
 
     @Override

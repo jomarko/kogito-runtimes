@@ -36,6 +36,7 @@ import org.xmlunit.diff.Diff;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Fail.fail;
+import static org.kie.kogito.svg.AbstractProcessSvgService.SVG_RELATIVE_PATH;
 
 public abstract class ProcessSvgServiceTest {
 
@@ -98,8 +99,8 @@ public abstract class ProcessSvgServiceTest {
 
     @Test
     public void readFileFromClassPathTest() throws Exception {
-        assertThat(getTestedProcessSvgService().readFileContentFromClassPath("undefined")).isEmpty();
-        assertThat(getTravelsSVGFile()).isEqualTo(getTestedProcessSvgService().readFileContentFromClassPath("travels.svg").get());
+        assertThat(getTestedProcessSvgService().readFileContentFromClassPath(SVG_RELATIVE_PATH, "undefined")).isEmpty();
+        assertThat(getTravelsSVGFile()).isEqualTo(getTestedProcessSvgService().readFileContentFromClassPath(SVG_RELATIVE_PATH, "travels.svg").get());
     }
 
     @Test

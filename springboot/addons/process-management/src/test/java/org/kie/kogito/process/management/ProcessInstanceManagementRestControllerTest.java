@@ -54,7 +54,7 @@ class ProcessInstanceManagementRestControllerTest {
 
     @BeforeEach
     void setUp() {
-        tested = spy(new ProcessInstanceManagementRestController(processes, application));
+        tested = spy(new ProcessInstanceManagementRestController(null, processes, application));
     }
 
     @Test

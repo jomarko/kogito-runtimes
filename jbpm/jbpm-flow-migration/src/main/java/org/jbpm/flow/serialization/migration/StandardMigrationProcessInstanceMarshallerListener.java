@@ -46,6 +46,7 @@ public class StandardMigrationProcessInstanceMarshallerListener implements Proce
         if (!migrationPlanService.hasMigrationPlan(runtime.getApplication().get(Processes.class), processInstance)) {
             if (!this.migrationPlanService.isEqualVersion(runtime.getApplication().get(Processes.class), processInstance)) {
                 LOGGER.debug("Process State version and process container mismatch. Migrating process without plan.");
+                // QUESTION: LUIZ ??? how this works?
                 RuleFlowProcessInstance ruleFlowProcessInstance = (RuleFlowProcessInstance) processInstance;
                 ruleFlowProcessInstance.setProcess(ruleFlowProcessInstance.getProcess());
             }

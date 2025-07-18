@@ -16,14 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.kie.kogito.svg;
+package org.kie.kogito.process.management;
 
-import java.util.Optional;
+public class NodeMigrationSpec {
+    private String sourceNodeId;
+    private String targetNodeId;
 
-public interface ProcessSvgService {
+    public String getSourceNodeId() {
+        return sourceNodeId;
+    }
 
-    Optional<String> getProcessInstanceSvg(String processId, String processInstanceId, String authHeader);
+    public void setSourceNodeId(String sourceNodeId) {
+        this.sourceNodeId = sourceNodeId;
+    }
 
-    Optional<String> getProcessSvg(String processId);
+    public String getTargetNodeId() {
+        return targetNodeId;
+    }
 
+    public void setTargetNodeId(String targetNodeId) {
+        this.targetNodeId = targetNodeId;
+    }
 }

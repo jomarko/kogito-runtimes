@@ -130,7 +130,7 @@ class BaseProcessInstanceManagementResourceTest {
         lenient().when(error.errorMessage()).thenReturn("Test error message");
         lenient().when(application.unitOfWorkManager()).thenReturn(new DefaultUnitOfWorkManager(new CollectingUnitOfWorkFactory()));
 
-        tested = spy(new BaseProcessInstanceManagementResource(processes, application) {
+        tested = spy(new BaseProcessInstanceManagementResource(null, processes, application) {
 
             @Override
             protected Object buildOkResponse(Object body) {
@@ -218,6 +218,16 @@ class BaseProcessInstanceManagementResourceTest {
             }
 
             @Override
+            public Object getMigrationPlan(String processId) {
+                return null;
+            }
+
+            @Override
+            public Object createMigrationPlan(String processId, ProcessMigrationSpec migrationSpec) {
+                return null;
+            }
+
+            @Override
             public Object migrateInstance(String processId, String processInstanceId, ProcessMigrationSpec migrationSpec) {
                 return null;
             }
@@ -231,6 +241,13 @@ class BaseProcessInstanceManagementResourceTest {
             public Object updateProcessInstanceSla(String processId, String processInstanceId, SlaPayload SLAPayload) {
                 return null;
             }
+
+            @Override
+            public Object getMigrationPlanById(String migrationPlanId) {
+                // TODO Auto-generated method stub
+                return null;
+            }
+
         });
     }
 

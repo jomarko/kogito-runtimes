@@ -30,6 +30,7 @@ import org.jbpm.flow.serialization.MarshallerContextName;
 import org.jbpm.flow.serialization.ProcessInstanceMarshallerService;
 import org.kie.kogito.Model;
 import org.kie.kogito.internal.process.runtime.HeadersPersistentConfig;
+import org.kie.kogito.process.MigrationPlanInterface;
 import org.kie.kogito.process.MutableProcessInstances;
 import org.kie.kogito.process.Process;
 import org.kie.kogito.process.ProcessInstance;
@@ -165,4 +166,21 @@ public class JDBCProcessInstances<T extends Model> implements MutableProcessInst
             return r.getPayload();
         }));
     }
+
+    @Override
+    public String createMigrationPlan(String sourceProcessId, String sourceProcessVersion, String targetProcessId,
+            String targetProcessVersion, String nodeMappingJson) {
+        LOGGER.debug("Creating migration plan from process {} version {} to process {} version {} with node mapping: {}",
+                sourceProcessId, sourceProcessVersion, targetProcessId, targetProcessVersion, nodeMappingJson);
+
+        String migrationPlanId = repository.insertMigrationPlanInternal(sourceProcessId, sourceProcessVersion, targetProcessId, targetProcessVersion, nodeMappingJson);
+        return "{\"migration_plan_id\": \"" + migrationPlanId + "\"}";
+    }
+
+    @Override
+    public Stream<MigrationPlanInterface> findMigrationPlanByProcessId(String processId) {
+
+        return repository.findAllMigrationPlanByProcessIdInternal(processId);
+    }
+
 }

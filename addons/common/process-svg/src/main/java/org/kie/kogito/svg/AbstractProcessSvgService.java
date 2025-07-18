@@ -80,12 +80,12 @@ public abstract class AbstractProcessSvgService implements ProcessSvgService {
                 throw new ProcessSVGException("Exception trying to read SVG file", e);
             }
         } else {
-            return readFileContentFromClassPath(processId + ".svg");
+            return readFileContentFromClassPath(SVG_RELATIVE_PATH, processId + ".svg");
         }
     }
 
-    protected Optional<String> readFileContentFromClassPath(String fileName) {
-        try (InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(SVG_RELATIVE_PATH + fileName)) {
+    protected Optional<String> readFileContentFromClassPath(String relativePath, String fileName) {
+        try (InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(relativePath + fileName)) {
             if (is == null) {
                 return Optional.empty();
             }
