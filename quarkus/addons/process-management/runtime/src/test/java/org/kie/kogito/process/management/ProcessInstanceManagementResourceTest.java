@@ -112,7 +112,7 @@ public class ProcessInstanceManagementResourceTest {
         lenient().when(process.get()).thenReturn(mock(KogitoWorkflowProcess.class));
 
         lenient().when(application.unitOfWorkManager()).thenReturn(new DefaultUnitOfWorkManager(new CollectingUnitOfWorkFactory()));
-        resource = spy(new ProcessInstanceManagementResource(processesInstance, application));
+        resource = spy(new ProcessInstanceManagementResource(null, processesInstance, application));
     }
 
     @Test

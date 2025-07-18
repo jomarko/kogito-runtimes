@@ -34,6 +34,8 @@ import org.kie.kogito.Application;
 import org.kie.kogito.Model;
 import org.kie.kogito.internal.process.runtime.KogitoNodeInstance;
 import org.kie.kogito.internal.process.runtime.KogitoWorkflowProcess;
+import org.kie.kogito.process.MigrationPlanInterface;
+import org.kie.kogito.process.MigrationPlanServiceNew;
 import org.kie.kogito.process.Process;
 import org.kie.kogito.process.ProcessError;
 import org.kie.kogito.process.ProcessInstance;
@@ -43,6 +45,7 @@ import org.kie.kogito.process.WorkItem;
 import org.kie.kogito.process.impl.AbstractProcess;
 import org.kie.kogito.services.uow.UnitOfWorkExecutor;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -56,17 +59,34 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
 
     private MigrationPlanProvider migrationPlanProvider = new MigrationPlanProvider.MigrationPlanProviderBuilder().withEnvironmentDefaults().build();
 
+    private Supplier<MigrationPlanServiceNew> mpsn;
     private Supplier<Processes> processes;
 
     private Application application;
 
-    public BaseProcessInstanceManagementResource(Processes processes, Application application) {
-        this(() -> processes, application);
+    public BaseProcessInstanceManagementResource(MigrationPlanServiceNew mpsn, Processes processes, Application application) {
+        this(() -> mpsn, () -> processes, application);
     }
 
-    public BaseProcessInstanceManagementResource(Supplier<Processes> processes, Application application) {
+    public BaseProcessInstanceManagementResource(Supplier<MigrationPlanServiceNew> mpsn, Supplier<Processes> processes, Application application) {
+        this.mpsn = mpsn;
         this.processes = processes;
         this.application = application;
+    }
+
+    public T doGetMigrationPlanById(String migrationPlanId) {
+        MigrationPlanInterface result = mpsn.get().findMigrationPlanById(migrationPlanId);
+        if (result != null) {
+            try {
+                return buildOkResponse(new ObjectMapper().writeValueAsString(result));
+            } catch (JsonProcessingException e) {
+                return badRequestResponse(String.format("Migration plan with id '%s' can nto be loaded: %s", migrationPlanId, e.getMessage()));
+            }
+        } else {
+            // TODO not usre if 404 should be returned
+            // OR 200 with empty result
+            return notFoundResponse(String.format("Migration plan with id '%s' not found", migrationPlanId));
+        }
     }
 
     public T doGetProcesses() {
@@ -191,11 +211,11 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
 
             List<NodeInstanceMigrationPlan> nodeMapping = migrationSpec.getNodeMapping();
             for (NodeInstanceMigrationPlan nodes : nodeMapping) {
-                if (sourceProcess.findNodes(nodeInstance -> nodeInstance.getId().equals(nodes.getSourceNodeId())).size() != 1) {
-                    return badRequestResponse(String.format("Source node '%s' not found in process '%s'", nodes.getSourceNodeId(), processId));
+                if (sourceProcess.findNodes(nodeInstance -> nodeInstance.getUniqueId().equals(nodes.getSourceNodeIdString())).size() != 1) {
+                    return badRequestResponse(String.format("Source node '%s' not found in process '%s'", nodes.getSourceNodeIdString(), processId));
                 }
-                if (targetProcess.findNodes(nodeInstance -> nodeInstance.getId().equals(nodes.getTargetNodeId())).size() != 1) {
-                    return badRequestResponse(String.format("Target node '%s' not found in process '%s'", nodes.getTargetNodeId(), migrationSpec.getTargetProcessId()));
+                if (targetProcess.findNodes(nodeInstance -> nodeInstance.getUniqueId().equals(nodes.getTargetNodeIdString())).size() != 1) {
+                    return badRequestResponse(String.format("Target node '%s' not found in process '%s'", nodes.getTargetNodeIdString(), migrationSpec.getTargetProcessId()));
                 }
             }
 

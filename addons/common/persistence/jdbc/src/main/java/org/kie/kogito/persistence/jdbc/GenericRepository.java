@@ -204,7 +204,7 @@ public class GenericRepository extends Repository {
         return new Record(rs.getBytes(PAYLOAD), rs.getLong(VERSION));
     }
 
-    private MigrationPlan migrationPlanRecordFrom(ResultSet rs) {
+    private MigrationPlan migrationPlanRecordFrom(final ResultSet rs) {
 
         try {
             return new MigrationPlan() {

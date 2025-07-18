@@ -59,6 +59,10 @@ public class MigrationPlanProvider {
         return migrationPlans;
     }
 
+    public int listAllProviders() {
+        return 0;
+    }
+
     private MigrationPlan readMigrationPlan(MigrationPlanFile mpf) throws IOException {
         try (InputStream is = new ByteArrayInputStream(mpf.getContent())) {
             for (MigrationPlanFileReader reader : fileReaders) {

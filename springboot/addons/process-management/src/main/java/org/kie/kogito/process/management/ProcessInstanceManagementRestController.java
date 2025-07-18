@@ -19,6 +19,7 @@
 package org.kie.kogito.process.management;
 
 import org.kie.kogito.Application;
+import org.kie.kogito.process.MigrationPlanServiceNew;
 import org.kie.kogito.process.Processes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -34,8 +35,8 @@ public class ProcessInstanceManagementRestController extends BaseProcessInstance
 
     @Autowired
     @Lazy
-    public ProcessInstanceManagementRestController(Processes processes, Application application) {
-        super(processes, application);
+    public ProcessInstanceManagementRestController(MigrationPlanServiceNew mpsn, Processes processes, Application application) {
+        super(mpsn, processes, application);
     }
 
     @Override
@@ -170,6 +171,12 @@ public class ProcessInstanceManagementRestController extends BaseProcessInstance
     @PatchMapping(value = "{processId}/instances/{processInstanceId}/sla")
     public ResponseEntity updateProcessInstanceSla(@PathVariable("processId") String processId, @PathVariable("processInstanceId") String processInstanceId, @RequestBody SlaPayload slaPayload) {
         return doUpdateProcessInstanceSla(processId, processInstanceId, slaPayload);
+    }
+
+    @Override
+    @GetMapping(value = "migrate/plan/{migrationPlanId}", produces = APPLICATION_JSON_VALUE)
+    public ResponseEntity getMigrationPlanById(@PathVariable("migrationPlanId") String migrationPlanId) {
+        return doGetMigrationPlanById(migrationPlanId);
     }
 
 }

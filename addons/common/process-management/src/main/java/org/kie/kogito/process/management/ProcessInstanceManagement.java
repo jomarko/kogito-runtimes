@@ -20,6 +20,8 @@ package org.kie.kogito.process.management;
 
 public interface ProcessInstanceManagement<T> {
 
+    T getMigrationPlanById(String migrationPlanId);
+
     T getProcesses();
 
     T getProcessInfo(String processId);

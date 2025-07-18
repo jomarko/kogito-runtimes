@@ -19,6 +19,7 @@
 package org.kie.kogito.process.management;
 
 import org.kie.kogito.Application;
+import org.kie.kogito.process.MigrationPlanServiceNew;
 import org.kie.kogito.process.Processes;
 
 import jakarta.enterprise.inject.Instance;
@@ -33,12 +34,12 @@ public class ProcessInstanceManagementResource extends BaseProcessInstanceManage
 
     //CDI
     public ProcessInstanceManagementResource() {
-        this(null, null);
+        this(null, null, null);
     }
 
     @Inject
-    public ProcessInstanceManagementResource(Instance<Processes> processes, Application application) {
-        super(processes::get, application);
+    public ProcessInstanceManagementResource(Instance<MigrationPlanServiceNew> mpsn, Instance<Processes> processes, Application application) {
+        super(mpsn::get, processes::get, application);
     }
 
     @Override
@@ -111,6 +112,14 @@ public class ProcessInstanceManagementResource extends BaseProcessInstanceManage
     @Produces(MediaType.APPLICATION_JSON)
     public Response migrateAllInstances(@PathParam("processId") String processId, ProcessMigrationSpec migrationSpec) {
         return doMigrateAllInstances(processId, migrationSpec);
+    }
+
+    @Override
+    @GET
+    @Path("migrate/plan/{migrationPlanId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getMigrationPlanById(@PathParam("migrationPlanId") String migrationPlanId) {
+        return doGetMigrationPlanById(migrationPlanId);
     }
 
     @Override
