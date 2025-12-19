@@ -163,6 +163,11 @@ class BaseProcessInstanceManagementResourceTest {
             }
 
             @Override
+            public Object getProcessInstanceJson(String processId, String processInstanceId) {
+                return "{}";
+            }
+
+            @Override
             public Object getProcessInstanceTimers(String processId, String processInstanceId) {
                 return null;
             }

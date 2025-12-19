@@ -18,15 +18,20 @@
  */
 package org.kie.kogito.process.management;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.jbpm.flow.serialization.MarshallerContextName;
+import org.jbpm.flow.serialization.ProcessInstanceMarshallerService;
 import org.jbpm.ruleflow.core.Metadata;
 import org.jbpm.workflow.core.Node;
 import org.jbpm.workflow.core.WorkflowProcess;
+import org.jbpm.workflow.instance.impl.WorkflowProcessInstanceImpl;
 import org.kie.kogito.Application;
+import org.kie.kogito.internal.process.runtime.HeadersPersistentConfig;
 import org.kie.kogito.internal.process.runtime.KogitoNodeInstance;
 import org.kie.kogito.internal.process.runtime.KogitoWorkflowProcess;
 import org.kie.kogito.process.Process;
@@ -36,6 +41,7 @@ import org.kie.kogito.process.ProcessInstanceExecutionException;
 import org.kie.kogito.process.Processes;
 import org.kie.kogito.process.WorkItem;
 import org.kie.kogito.process.impl.AbstractProcess;
+import org.kie.kogito.process.impl.AbstractProcessInstance;
 import org.kie.kogito.services.uow.UnitOfWorkExecutor;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -130,6 +136,48 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
             // use special security policy to bypass auth check as this is management operation
             List<WorkItem> workItems = processInstance.workItems();
             return buildOkResponse(workItems);
+        });
+    }
+
+    public T doGetProcessInstanceJson(String processId, String processInstanceId) {
+
+        return executeOnProcessInstance(processId, processInstanceId, processInstance -> {
+
+            if (processInstance instanceof AbstractProcessInstance) {
+
+                ((AbstractProcessInstance) processInstance).internalLoadProcessInstanceState();
+
+                if (((AbstractProcessInstance) processInstance).internalGetProcessInstance() instanceof WorkflowProcessInstanceImpl) {
+
+                    return buildOkResponse(new String(ProcessInstanceMarshallerService.newBuilder()
+                            .withDefaultObjectMarshallerStrategies()
+                            .withDefaultListeners()
+                            .withContextEntry(MarshallerContextName.MARSHALLER_FORMAT, MarshallerContextName.MARSHALLER_FORMAT_JSON)
+                            .withContextEntry(MarshallerContextName.MARSHALLER_HEADERS_CONFIG, HeadersPersistentConfig.of(false, Optional.empty()))
+                            .build().marshallProcessInstance(processInstance), StandardCharsets.UTF_8));
+
+                    // BufferedOutputStream out = new BufferedOutputStream(System.out, 8192);
+
+                    // ProtobufProcessMarshallerWriteContext ctxOut = new ProtobufProcessMarshallerWriteContext(out);
+                    // ctxOut.set(MarshallerContextName.OBJECT_MARSHALLING_STRATEGIES, ObjectMarshallerStrategyHelper.defaultStrategies());
+                    // ctxOut.set(MarshallerContextName.MARSHALLER_PROCESS, processInstance.process());
+                    // ctxOut.set(MarshallerContextName.MARSHALLER_FORMAT, MarshallerContextName.MARSHALLER_FORMAT_JSON);
+
+                    // ProtobufProcessInstanceWriter writer = new ProtobufProcessInstanceWriter(ctxOut);
+
+                    // try {
+                    //     writer.writeProcessInstance((WorkflowProcessInstanceImpl) ((AbstractProcessInstance) processInstance).internalGetProcessInstance(), out);
+                    //     return buildOkResponse(out);
+                    // } catch (IOException e) {
+                    //     // TODO Auto-generated catch block
+                    //     return badRequestResponse(e.getMessage());
+                    // }
+                } else {
+                    return notFoundResponse("Process Instance Not WorkflowProcessInstanceImpl");
+                }
+            } else {
+                return notFoundResponse("Process Instance Not WorkflowProcessInstanceImpl");
+            }
         });
     }
 

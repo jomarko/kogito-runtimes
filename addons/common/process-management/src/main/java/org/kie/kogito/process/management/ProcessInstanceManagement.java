@@ -30,6 +30,8 @@ public interface ProcessInstanceManagement<T> {
 
     T getWorkItemsInProcessInstance(String processId, String processInstanceId);
 
+    T getProcessInstanceJson(String processId, String processInstanceId);
+
     T getProcessInstanceTimers(String processId, String processInstanceId);
 
     T retriggerInstanceInError(String processId, String processInstanceId);
