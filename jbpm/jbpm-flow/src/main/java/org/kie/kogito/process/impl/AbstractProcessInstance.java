@@ -214,7 +214,7 @@ public abstract class AbstractProcessInstance<T extends Model> implements Proces
         }
     }
 
-    protected void reconnect() {
+    public void reconnect() {
         LOG.debug("reconnect process instance {}", id);
         if (correlationInstance.isEmpty()) {
             correlationInstance = process().correlations().findByCorrelatedId(id());
@@ -354,7 +354,7 @@ public abstract class AbstractProcessInstance<T extends Model> implements Proces
         });
     }
 
-    private InternalProcessRuntime getProcessRuntime() {
+    public InternalProcessRuntime getProcessRuntime() {
         if (rt == null) {
             throw new UnsupportedOperationException("Process instance is not connected to a Process Runtime");
         } else {

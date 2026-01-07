@@ -32,6 +32,8 @@ public interface ProcessInstanceManagement<T> {
 
     T getProcessInstanceJson(String processId, String processInstanceId);
 
+    T createProcessInstanceFromJson(String processId, String jsonProcessInstance);
+
     T getProcessInstanceTimers(String processId, String processInstanceId);
 
     T retriggerInstanceInError(String processId, String processInstanceId);

@@ -91,6 +91,12 @@ public class ProcessInstanceManagementRestController extends BaseProcessInstance
     }
 
     @Override
+    @PostMapping(value = "{processId}/instances/json", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+    public ResponseEntity createProcessInstanceFromJson(@PathVariable("processId") String processId, @RequestBody String jsonProcessInstance) {
+        return doCreateProcessInstanceFromJson(processId, jsonProcessInstance);
+    }
+
+    @Override
     @GetMapping(value = "{processId}/instances/{processInstanceId}/timers", produces = APPLICATION_JSON_VALUE)
     public ResponseEntity getProcessInstanceTimers(@PathVariable("processId") String processId, @PathVariable("processInstanceId") String processInstanceId) {
         return doGetProcessInstanceTimers(processId, processInstanceId);

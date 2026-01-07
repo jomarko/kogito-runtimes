@@ -18,6 +18,8 @@
  */
 package org.kie.kogito.process.management;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
@@ -34,6 +36,7 @@ import org.kie.kogito.Application;
 import org.kie.kogito.internal.process.runtime.HeadersPersistentConfig;
 import org.kie.kogito.internal.process.runtime.KogitoNodeInstance;
 import org.kie.kogito.internal.process.runtime.KogitoWorkflowProcess;
+import org.kie.kogito.process.MutableProcessInstances;
 import org.kie.kogito.process.Process;
 import org.kie.kogito.process.ProcessError;
 import org.kie.kogito.process.ProcessInstance;
@@ -43,11 +46,14 @@ import org.kie.kogito.process.WorkItem;
 import org.kie.kogito.process.impl.AbstractProcess;
 import org.kie.kogito.process.impl.AbstractProcessInstance;
 import org.kie.kogito.services.uow.UnitOfWorkExecutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
 public abstract class BaseProcessInstanceManagementResource<T> implements ProcessInstanceManagement<T> {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(BaseProcessInstanceManagementResource.class);
     private static final String PROCESS_REQUIRED = "Process id must be given";
     private static final String PROCESS_AND_INSTANCE_REQUIRED = "Process id and Process instance id must be given";
     private static final String PROCESS_NOT_FOUND = "Process with id %s not found";
@@ -177,6 +183,83 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
                 }
             } else {
                 return notFoundResponse("Process Instance Not WorkflowProcessInstanceImpl");
+            }
+        });
+    }
+
+    public T doCreateProcessInstanceFromJson(String processId, String jsonProcessInstance) {
+        if (processId == null) {
+            return badRequestResponse(PROCESS_REQUIRED);
+        }
+
+        if (jsonProcessInstance == null || jsonProcessInstance.trim().isEmpty()) {
+            return badRequestResponse("JSON process instance data must be provided");
+        }
+
+        Process<?> process = processes.get().processById(processId);
+        if (process == null) {
+            return notFoundResponse(String.format(PROCESS_NOT_FOUND, processId));
+        }
+
+        return UnitOfWorkExecutor.executeInUnitOfWork(application.unitOfWorkManager(), () -> {
+            try {
+                // Unmarshall the JSON to create a process instance
+                ProcessInstanceMarshallerService marshaller = ProcessInstanceMarshallerService.newBuilder()
+                        .withDefaultObjectMarshallerStrategies()
+                        .withDefaultListeners()
+                        .withContextEntry(MarshallerContextName.MARSHALLER_FORMAT, MarshallerContextName.MARSHALLER_FORMAT_JSON)
+                        .withContextEntry(MarshallerContextName.MARSHALLER_HEADERS_CONFIG, HeadersPersistentConfig.of(false, Optional.empty()))
+                        .withContextEntry(MarshallerContextName.MARSHALLER_PROCESS, process)
+                        .build();
+
+                ProcessInstance<?> processInstance = marshaller.unmarshallProcessInstance(jsonProcessInstance.getBytes(StandardCharsets.UTF_8), process);
+
+                LOGGER.error("Unmarshalled process instance: {}", processInstance);
+
+                if (processInstance == null) {
+                    return badRequestResponse("Unmarshalling returned null process instance");
+                }
+
+                if (processInstance instanceof AbstractProcessInstance) {
+                    AbstractProcessInstance<?> abstractProcessInstance = (AbstractProcessInstance<?>) processInstance;
+                    if (process.instances() instanceof MutableProcessInstances) {
+                        String newId = UUID.randomUUID().toString();
+
+                        abstractProcessInstance
+                                .internalSetReloadSupplier(marshaller.createdReloadFunction(() -> jsonProcessInstance.replace(abstractProcessInstance.id(), newId).getBytes(StandardCharsets.UTF_8)));
+                        abstractProcessInstance.internalLoadProcessInstanceState();
+                        abstractProcessInstance.getProcessRuntime();
+
+                        ((MutableProcessInstances) process.instances()).create(newId, abstractProcessInstance);
+
+                        abstractProcessInstance.reconnect();
+                    } else {
+                        LOGGER.error("Process instances is not mutable, cannot create process instance");
+                    }
+
+                    final Map<String, Object> response = new HashMap<>();
+                    response.put("message", "It is abstract process instance");
+                    return buildOkResponse(response);
+                } else {
+                    return badRequestResponse("Unable to create process instance from provided JSON");
+                }
+            } catch (Exception e) {
+                // Log the full stack trace for debugging
+                LOGGER.error("Error creating process instance from JSON", e);
+
+                // Build detailed error message with stack trace
+                StringWriter sw = new StringWriter();
+                PrintWriter pw = new PrintWriter(sw);
+                e.printStackTrace(pw);
+                String stackTrace = sw.toString();
+
+                String errorMessage = e.getMessage() != null ? e.getMessage() : e.getClass().getName();
+                if (e.getCause() != null) {
+                    errorMessage += " - Cause: " + (e.getCause().getMessage() != null ? e.getCause().getMessage() : e.getCause().getClass().getName());
+                }
+                errorMessage += "\nStack trace:\n" + stackTrace;
+
+                return badRequestResponse("Error creating process instance from JSON: " + errorMessage);
             }
         });
     }
