@@ -24,6 +24,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.jbpm.flow.serialization.MarshallerContextName;
@@ -32,6 +34,7 @@ import org.jbpm.ruleflow.core.Metadata;
 import org.jbpm.workflow.core.Node;
 import org.jbpm.workflow.core.WorkflowProcess;
 import org.jbpm.workflow.instance.impl.WorkflowProcessInstanceImpl;
+import org.jbpm.workflow.instance.node.WorkItemNodeInstance;
 import org.kie.kogito.Application;
 import org.kie.kogito.internal.process.runtime.HeadersPersistentConfig;
 import org.kie.kogito.internal.process.runtime.KogitoNodeInstance;
@@ -45,6 +48,7 @@ import org.kie.kogito.process.Processes;
 import org.kie.kogito.process.WorkItem;
 import org.kie.kogito.process.impl.AbstractProcess;
 import org.kie.kogito.process.impl.AbstractProcessInstance;
+import org.kie.kogito.process.workitems.InternalKogitoWorkItem;
 import org.kie.kogito.services.uow.UnitOfWorkExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -223,22 +227,68 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
                 if (processInstance instanceof AbstractProcessInstance) {
                     AbstractProcessInstance<?> abstractProcessInstance = (AbstractProcessInstance<?>) processInstance;
                     if (process.instances() instanceof MutableProcessInstances) {
+                        MutableProcessInstances mutableInstances = (MutableProcessInstances) process.instances();
                         String newId = UUID.randomUUID().toString();
 
+                        // Replace process instance ID and all work item IDs in the JSON
+                        String updatedJson = replaceIdsInJson(jsonProcessInstance, abstractProcessInstance.id(), newId);
+
                         abstractProcessInstance
-                                .internalSetReloadSupplier(marshaller.createdReloadFunction(() -> jsonProcessInstance.replace(abstractProcessInstance.id(), newId).getBytes(StandardCharsets.UTF_8)));
+                                .internalSetReloadSupplier(marshaller.createdReloadFunction(() -> updatedJson.getBytes(StandardCharsets.UTF_8)));
                         abstractProcessInstance.internalLoadProcessInstanceState();
                         abstractProcessInstance.getProcessRuntime();
 
-                        ((MutableProcessInstances) process.instances()).create(newId, abstractProcessInstance);
+                        mutableInstances.create(newId, abstractProcessInstance);
 
                         abstractProcessInstance.reconnect();
+
+                        // Update the instance to ensure it's properly persisted with its current state
+                        mutableInstances.update(newId, abstractProcessInstance);
+
+                        // Fire process events for Data Index
+                        try {
+                            if (abstractProcessInstance.internalGetProcessInstance() instanceof WorkflowProcessInstanceImpl) {
+                                WorkflowProcessInstanceImpl internalInstance = (WorkflowProcessInstanceImpl) abstractProcessInstance.internalGetProcessInstance();
+                                org.drools.core.common.InternalKnowledgeRuntime kruntime = internalInstance.getKnowledgeRuntime();
+                                if (kruntime != null) {
+                                    org.jbpm.process.instance.InternalProcessRuntime processRuntime =
+                                            (org.jbpm.process.instance.InternalProcessRuntime) kruntime.getProcessRuntime();
+
+                                    // Fire the after process started event to notify Data Index
+                                    processRuntime.getProcessEventSupport().fireAfterProcessStarted(internalInstance, kruntime);
+                                    LOGGER.debug("Fired process started event for instance: {}", newId);
+
+                                    // Register all active work items with the work item manager
+                                    List<WorkItemNodeInstance> workItemNodeInstances = activeWorkItemNodeInstances(internalInstance);
+                                    for (WorkItemNodeInstance workItemNodeInstance : workItemNodeInstances) {
+                                        InternalKogitoWorkItem workItem = workItemNodeInstance.getWorkItem();
+
+                                        // Register the work item - this makes it available to the work item manager
+                                        workItemNodeInstance.internalRegisterWorkItem();
+
+                                        // Fire node triggered events for Data Index
+                                        processRuntime.getProcessEventSupport().fireBeforeNodeTriggered(workItemNodeInstance, kruntime);
+                                        processRuntime.getProcessEventSupport().fireAfterNodeTriggered(workItemNodeInstance, kruntime);
+
+                                        LOGGER.debug("Registered work item: {} in node instance: {}",
+                                                workItem.getStringId(), workItemNodeInstance.getStringId());
+                                    }
+                                }
+                            }
+                        } catch (Exception e) {
+                            LOGGER.error("Failed to process restored instance {}: {}", newId, e.getMessage(), e);
+                        }
+
+                        LOGGER.error("Process instance created with id: {}, status: {}", newId, abstractProcessInstance.status());
                     } else {
                         LOGGER.error("Process instances is not mutable, cannot create process instance");
+                        return badRequestResponse("Process instances is not mutable, cannot create process instance");
                     }
 
                     final Map<String, Object> response = new HashMap<>();
-                    response.put("message", "It is abstract process instance");
+                    response.put("id", abstractProcessInstance.id());
+                    response.put("status", abstractProcessInstance.status());
+                    response.put("message", "Process instance created successfully");
                     return buildOkResponse(response);
                 } else {
                     return badRequestResponse("Unable to create process instance from provided JSON");
@@ -451,4 +501,81 @@ public abstract class BaseProcessInstanceManagementResource<T> implements Proces
             }
         });
     }
+
+    /**
+     * Replaces the process instance ID and all work item IDs in the JSON with new UUIDs.
+     * Also removes externalReferenceId fields as they will be set when user tasks are created.
+     * This ensures that when creating a new process instance from JSON, all IDs are unique.
+     *
+     * @param json the original JSON string
+     * @param oldProcessInstanceId the old process instance ID to replace
+     * @param newProcessInstanceId the new process instance ID
+     * @return the updated JSON with all IDs replaced
+     */
+    private String replaceIdsInJson(String json, String oldProcessInstanceId, String newProcessInstanceId) {
+        // First, replace the process instance ID
+        String updatedJson = json.replace(oldProcessInstanceId, newProcessInstanceId);
+
+        // Pattern to match workItemId fields in JSON
+        // Matches: "workItemId": "uuid-value"
+        Pattern workItemIdPattern = Pattern.compile("\"workItemId\"\\s*:\\s*\"([a-f0-9\\-]{36})\"");
+        Matcher matcher = workItemIdPattern.matcher(updatedJson);
+
+        // Map to store old work item ID -> new work item ID mappings
+        Map<String, String> workItemIdReplacements = new HashMap<>();
+
+        // Find all work item IDs and create new UUIDs for them
+        while (matcher.find()) {
+            String oldWorkItemId = matcher.group(1);
+            if (!workItemIdReplacements.containsKey(oldWorkItemId)) {
+                workItemIdReplacements.put(oldWorkItemId, UUID.randomUUID().toString());
+            }
+        }
+
+        // Replace all work item IDs with their new UUIDs
+        for (Map.Entry<String, String> entry : workItemIdReplacements.entrySet()) {
+            updatedJson = updatedJson.replace(entry.getKey(), entry.getValue());
+        }
+
+        // Remove externalReferenceId fields - they will be set when user tasks are created
+        // Pattern matches: "externalReferenceId": "uuid-value",
+        updatedJson = updatedJson.replaceAll(",\\s*\"externalReferenceId\"\\s*:\\s*\"[a-f0-9\\-]{36}\"", "");
+        // Also handle case where it might be the last field (no trailing comma)
+        updatedJson = updatedJson.replaceAll("\"externalReferenceId\"\\s*:\\s*\"[a-f0-9\\-]{36}\",?", "");
+
+        LOGGER.debug("Replaced {} work item IDs and removed externalReferenceId fields in JSON", workItemIdReplacements.size());
+
+        return updatedJson;
+    }
+
+    /**
+     * Retrieves all active work item node instances (user tasks) from the process instance.
+     * This ensures that Data Index receives events for all user tasks in the process instance
+     * so they can be properly indexed and queried via GraphQL.
+     *
+     * @param processInstance the workflow process instance
+     * @return list of active work item node instances
+     */
+    private List<WorkItemNodeInstance> activeWorkItemNodeInstances(WorkflowProcessInstanceImpl processInstance) {
+
+        // Get all node instances recursively
+        Collection<org.jbpm.workflow.instance.NodeInstance> nodeInstances = processInstance.getNodeInstances(true);
+
+        final List<WorkItemNodeInstance> activeWorkItemNodeInstances = new ArrayList<>();
+        for (org.jbpm.workflow.instance.NodeInstance nodeInstance : nodeInstances) {
+            if (nodeInstance instanceof WorkItemNodeInstance) {
+                WorkItemNodeInstance workItemNodeInstance = (WorkItemNodeInstance) nodeInstance;
+                InternalKogitoWorkItem workItem = workItemNodeInstance.getWorkItem();
+
+                if (workItem != null && workItem.getState() == 1) { // State 1 = ACTIVE
+                    activeWorkItemNodeInstances.add(workItemNodeInstance);
+                    LOGGER.debug("Found active work item: {} in state: {} with phase: {}",
+                            workItem.getStringId(), workItem.getState(), workItem.getPhaseId());
+                }
+            }
+        }
+
+        return activeWorkItemNodeInstances;
+    }
+
 }
